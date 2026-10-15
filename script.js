@@ -1990,7 +1990,7 @@ function gameOver() {
   setTimeout(() => {
     if (run !== G.runId) return;
     showOverlay('game-over-ui');
-    if (canRank) $('player-name').focus();
+    if (canRank && !isTouch) $('player-name').focus(); // 휴대폰은 자동으로 키보드를 띄우지 않음
   }, 1000);
 }
 
@@ -2253,7 +2253,14 @@ function sizeCanvas(c, lw, lh) {
   }
   c._k = w / lw;
 }
+// 휴대폰 키보드가 떠 있는 동안(입력칸 사용 중)은 화면 배치를 그대로 유지
+// → 키보드 때문에 화면 높이가 줄어도 '가로 화면'으로 착각하지 않음
+const isTyping = () => {
+  const a = document.activeElement;
+  return isTouch && !!a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName);
+};
 function fit() {
+  if (isTyping()) return;
   const body = document.body;
   body.classList.toggle('touch', isTouch);
   const probe = $('safe-probe').getBoundingClientRect();
@@ -2286,6 +2293,18 @@ function fit() {
   drawPreviews();
   $('intro-hint').textContent = isTouch ? '화면을 터치해서 시작하세요' : '아무 키나 누르거나 클릭하세요';
 }
+
+document.addEventListener('focusin', (e) => {
+  if (isTouch && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) document.body.classList.add('typing');
+});
+document.addEventListener('focusout', (e) => {
+  if (!/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+  document.body.classList.remove('typing');
+  setTimeout(() => {
+    window.scrollTo(0, 0);
+    fit();
+  }, 350);
+});
 
 /* ---------------- 터치 조작 ---------------- */
 const canPlay = () => G.state === 'PLAYING' && !!G.piece;

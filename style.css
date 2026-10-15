@@ -1905,3 +1905,15 @@ select {
   bottom: 22px;
   margin: 0;
 }
+
+/* 닉네임 입력 중(휴대폰 키보드 열림): 창을 위쪽으로 올리고 오답 노트는 잠시 숨김 */
+body.typing #game-over-ui {
+  align-items: flex-start;
+}
+body.typing #game-over-ui .modal {
+  margin-top: 10px;
+  animation: none;
+}
+body.typing #review-box {
+  display: none;
+}
