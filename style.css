@@ -1864,3 +1864,27 @@ body.touch.landscape .tc-right {
 body.touch.landscape .tc-right .tc-drop {
   height: 146px;
 }
+
+/* =========================================================
+   아이폰 길게 누르기 → '복사하기·찾아보기' 메뉴, 글자 선택, 이미지 끌기 막기
+   (iOS Safari는 -webkit- 접두어가 있어야 적용됨)
+   ========================================================= */
+*,
+*::before,
+*::after {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+img,
+canvas {
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+input,
+textarea,
+select {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}

@@ -2424,6 +2424,16 @@ document.addEventListener(
   },
   { passive: false },
 );
+// 글자 선택·끌기 시작 자체를 막음 (입력칸 제외)
+const isField = (t) => t && t.closest && t.closest('input, textarea, select');
+document.addEventListener('selectstart', (e) => {
+  if (!isField(e.target)) e.preventDefault();
+});
+document.addEventListener('dragstart', (e) => e.preventDefault());
+// 조작 버튼·보드에서 길게 눌러도 iOS 메뉴/돋보기가 안 뜨게 (포인터 이벤트는 그대로 동작)
+['touch-controls', 'board-wrap'].forEach((id) =>
+  $(id).addEventListener('touchstart', (e) => e.preventDefault(), { passive: false }),
+);
 document.addEventListener('contextmenu', (e) => {
   if (!e.target.closest('input')) e.preventDefault();
 });
