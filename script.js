@@ -404,24 +404,60 @@ const TTS = (() => {
     choose();
     if (typeof fillVoiceSelect === 'function') fillVoiceSelect();
   }
-  function speak(text, rate) {
-    if (!synth || !settings.tts || settings.muted || !text) return;
-    synth.cancel();
+  // 인터넷 음성(예: Google 普通话)이 안 나오면 이 컴퓨터에 설치된 중국어 음성으로 바꿔서 기억
+  let networkFailed = false;
+  let keep = null; // Chrome이 말하는 도중 문장을 버리지 않도록 붙잡아 둠
+  let watchdog = null;
+  const localVoice = () =>
+    voices.find((v) => v.localService && !notMainland(v) && !isMale(v)) || voices.find((v) => v.localService && !notMainland(v)) || null;
+  function say(text, rate, v, allowRetry) {
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = voice ? voice.lang : 'zh-CN';
+    u.lang = v ? v.lang : 'zh-CN';
     try {
-      if (voice) u.voice = voice;
+      if (v) u.voice = v;
     } catch (e) {}
     u.rate = rate || settings.rate / 100;
     u.pitch = 1.05;
+    u.volume = 1;
+    let started = false;
+    u.onstart = () => {
+      started = true;
+      clearTimeout(watchdog);
+    };
     u.onend = u.onerror = () => {
+      if (keep === u) keep = null;
       Sound.ensure();
       setTimeout(() => {
         Sound.ensure();
         BGM.keepAlive();
       }, 150);
     };
+    keep = u;
+    try {
+      if (synth.paused) synth.resume();
+    } catch (e) {}
     synth.speak(u);
+    // 1.5초 안에 소리가 시작되지 않으면 → 설치된 음성으로 다시 말하기
+    clearTimeout(watchdog);
+    if (allowRetry) {
+      watchdog = setTimeout(() => {
+        if (started) return;
+        const local = localVoice();
+        if (v && v.localService === false) networkFailed = true;
+        synth.cancel();
+        setTimeout(() => say(text, rate, local && local !== v ? local : null, false), 80);
+      }, 1500);
+    }
+  }
+  function speak(text, rate) {
+    if (!synth || !settings.tts || settings.muted || !text) return;
+    let v = voice;
+    if (v && v.localService === false && networkFailed && !settings.voice) v = localVoice() || v;
+    clearTimeout(watchdog);
+    const busy = synth.speaking || synth.pending;
+    if (busy) synth.cancel();
+    // Chrome은 cancel 직후 바로 speak하면 새 문장을 버리는 경우가 있어 잠깐 쉬었다가 말함
+    setTimeout(() => say(text, rate, v, true), busy ? 90 : 0);
   }
   // 아이폰은 첫 터치 때 한 번 말을 시켜야 이후 음성이 나옴
   function unlock() {
@@ -438,6 +474,9 @@ const TTS = (() => {
     choose,
     get voice() {
       return voice;
+    },
+    get networkFailed() {
+      return networkFailed;
     },
     get voices() {
       return voices;
@@ -2296,7 +2335,9 @@ function fillVoiceSelect() {
   sel.value = settings.voice || '';
   const note = $('voice-note');
   const v = TTS.voice;
-  if (!v) {
+  if (v && TTS.networkFailed) {
+    note.textContent = '인터넷 음성이 나오지 않아서 이 컴퓨터에 설치된 중국어 음성으로 바꿨어요.';
+  } else if (!v) {
     note.textContent = '이 기기에서 중국어 음성을 찾지 못했어요. Chrome(아이폰은 Safari도 OK)에서 열고 인터넷 연결을 확인해 주세요. (듣기 문제는 자동으로 빠져요)';
   } else if (/ting/i.test(v.name)) {
     note.textContent = `지금 음성: ${v.name}`;
