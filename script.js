@@ -220,7 +220,7 @@ const BGM = (() => {
   const TRACKS = {
     lobby: ['lobby'],
     PRACTICE: ['practice', 'practice2'],
-    NORMAL: ['normal', 'normal2'],
+    NORMAL: ['normal', 'normal2', 'practice', 'practice2'],
     HELL: ['hell', 'hell2'],
     over: ['over'],
   };
@@ -519,16 +519,20 @@ const FEVER_MS = 15000;
 const G = { state: 'IDLE', mode: 'NORMAL', section: 1, runId: 0, particles: [], popups: [], trails: [], sky: [] };
 
 /* 구간(25단어) · 단어별 정답 기록 */
-const SECTION_COUNT = Math.ceil(VOCAB_LIST.length / SECTION_SIZE);
+// 노멀 = 25단어씩 40구간, 헬 = 100단어씩 10구간
+const SEC_SIZE = { NORMAL: SECTION_SIZE, HELL: 100 };
+const secSize = (mode = G.mode) => SEC_SIZE[mode] || SECTION_SIZE;
+const secCount = (mode = G.mode) => Math.ceil(VOCAB_LIST.length / secSize(mode));
 const MASTER_KEY = 'cikuai_hsk4_mastery';
 const mastery = loadJSON(MASTER_KEY, {});
 const pad4 = (n) => String(n).padStart(4, '0');
-function sectionWords(sec) {
-  const s = (sec - 1) * SECTION_SIZE;
-  return VOCAB_LIST.slice(s, s + SECTION_SIZE);
+function sectionWords(sec, mode = G.mode) {
+  const n = secSize(mode);
+  const s = (sec - 1) * n;
+  return VOCAB_LIST.slice(s, s + n);
 }
-function sectionProgress(sec) {
-  return sectionWords(sec).filter((w) => mastery[w.no] > 0).length;
+function sectionProgress(sec, mode = G.mode) {
+  return sectionWords(sec, mode).filter((w) => mastery[w.no] > 0).length;
 }
 function markCorrect(w) {
   mastery[w.no] = (mastery[w.no] || 0) + 1;
@@ -1066,7 +1070,7 @@ function startQuiz() {
   const type = types[Math.floor(Math.random() * types.length)];
 
   // 오답 후보: 연습 모드는 같은 구간 단어에서 먼저 (비슷한 단어끼리 헷갈리게)
-  const base = practice ? sectionWords(G.section) : VOCAB_LIST;
+  const base = sectionWords(G.section);
   let pool = shuffle(base.filter((v) => v.cn !== q.cn && v.kr !== q.kr));
   if (pool.length < 4) pool = shuffle(VOCAB_LIST.filter((v) => v.cn !== q.cn && v.kr !== q.kr));
   let options, correct, say, promptKr, pr;
@@ -1145,13 +1149,9 @@ function startQuiz() {
   if (type === 'cn2kr' || type === 'listen') setTimeout(() => G.state === 'QUIZ' && TTS.speak(say), 300);
 }
 function pickQuizWord() {
-  if (G.mode === 'PRACTICE') {
-    // 구간 25단어를 한 바퀴씩, 틀린 단어는 2문제 뒤에 다시
-    if (!G.qQueue.length) G.qQueue = shuffle(sectionWords(G.section).slice());
-    return G.qQueue.shift();
-  }
-  if (!G.quizPool.length) G.quizPool = shuffle([...VOCAB_LIST]);
-  return G.quizPool.pop();
+  // 고른 구간 단어를 한 바퀴씩, 틀린 단어는 2문제 뒤에 다시
+  if (!G.qQueue.length) G.qQueue = shuffle(sectionWords(G.section).slice());
+  return G.qQueue.shift();
 }
 function updateQuiz(now) {
   const z = G.quiz;
@@ -1189,13 +1189,13 @@ function answerQuiz(i) {
     G.lvQuizRight++;
     G.streak++;
     markCorrect(z.q);
-    if (practice && !G.sectionDone && sectionProgress(G.section) >= sectionWords(G.section).length) {
+    if (!G.sectionDone && sectionProgress(G.section) >= sectionWords(G.section).length) {
       G.sectionDone = true;
       const run = G.runId;
       setTimeout(() => {
         if (run !== G.runId) return;
         S.levelUp();
-        showAction('完成!', `${G.section}구간 25단어 모두 맞혔어요`, '#ffc94a');
+        showAction('完成!', `${G.section}구간 ${sectionWords(G.section).length}단어 모두 맞혔어요`, '#ffc94a');
       }, 1300);
     }
     const frac = Math.max(0, 1 - (performance.now() - z.start) / z.dur);
@@ -1215,7 +1215,7 @@ function answerQuiz(i) {
     G.streak = 0;
     if (!practice) G.gauge = 0;
     G.missed.set(z.q.cn, z.q);
-    if (practice) G.qQueue.splice(Math.min(2, G.qQueue.length), 0, z.q);
+    G.qQueue.splice(Math.min(2, G.qQueue.length), 0, z.q);
     showNotice(i < 0 ? '超时!' : '答错!', '#ff4d5e');
   }
   setTimeout(() => TTS.speak(z.say), 200);
@@ -1479,7 +1479,7 @@ function updateHUD() {
   const chips = [];
   if (G.reversedUntil > G.clock) chips.push(`<span class="chip" style="color:#ff4d5e">⇄ 좌우반전 ${Math.ceil((G.reversedUntil - G.clock) / 1000)}</span>`);
   if (fever) chips.push(`<span class="chip" style="color:#ffc94a">🔥 FEVER ×2</span>`);
-  if (G.mode === 'PRACTICE') chips.push(`<span class="chip" style="color:#2de0a7">📘 ${G.section}구간 ${sectionProgress(G.section)}/${sectionWords(G.section).length}</span>`);
+  if (G.section) chips.push(`<span class="chip" style="color:${G.mode === 'HELL' ? '#ff9a2e' : '#2de0a7'}">📘 ${G.section}구간 ${sectionProgress(G.section)}/${sectionWords(G.section).length}</span>`);
   const html = chips.join('');
   const box = $('status-chips');
   if (box.innerHTML !== html) box.innerHTML = html;
@@ -1638,7 +1638,7 @@ document.addEventListener('keydown', (e) => {
   }
 
   if (G.state === 'IDLE' && anyOpen('lobby-ui')) {
-    const m = { Digit1: 'PRACTICE', Digit2: 'NORMAL', Digit3: 'HELL' }[code];
+    const m = { Digit1: 'NORMAL', Digit2: 'HELL' }[code];
     if (m) startGame(m);
     return;
   }
@@ -1727,7 +1727,7 @@ function hideAll() {
 }
 function setModeLook(mode) {
   document.body.dataset.mode = mode;
-  $('mode-badge').textContent = mode === 'LOBBY' ? 'LOBBY' : mode === 'PRACTICE' ? `练习 ${G.section}구간` : MODE_CFG[mode].label;
+  $('mode-badge').textContent = mode === 'LOBBY' ? 'LOBBY' : `${MODE_CFG[mode].label.split(' ')[0]} ${G.section}구간`;
 }
 
 function closeIntro() {
@@ -1755,7 +1755,7 @@ function showLobby() {
   BGM.play('lobby');
 }
 function startGame(mode, section) {
-  if (mode === 'PRACTICE' && !section) return openSections();
+  if (!section) return openSections(mode);
   if (document.activeElement) document.activeElement.blur();
   hideAll();
   resetGame(mode, section);
@@ -1890,15 +1890,19 @@ function gameOver() {
   }, 1000);
 }
 
-/* ---------------- 연습 구간 선택 ---------------- */
-function openSections() {
+/* ---------------- 구간 선택 (노멀 25단어 · 헬 100단어) ---------------- */
+const words0 = (mode) => secSize(mode);
+function openSections(mode = 'NORMAL') {
   hideAll();
   const grid = $('section-grid');
   grid.innerHTML = '';
+  grid.dataset.mode = mode;
+  $('section-title').textContent = (mode === 'HELL' ? '🔥 헬 모드' : '노멀 모드') + ' 구간 선택';
   let rec = 0, doneCount = 0, mastered = 0;
-  for (let sec = 1; sec <= SECTION_COUNT; sec++) {
-    const words = sectionWords(sec);
-    const prog = sectionProgress(sec);
+  const total = secCount(mode);
+  for (let sec = 1; sec <= total; sec++) {
+    const words = sectionWords(sec, mode);
+    const prog = sectionProgress(sec, mode);
     mastered += prog;
     const done = prog >= words.length;
     if (done) doneCount++;
@@ -1912,13 +1916,13 @@ function openSections() {
       `<span class="sec-cn"></span><span class="sec-bar"><i></i></span>`;
     b.querySelector('.sec-cn').textContent = `${words[0].cn} … ${words[words.length - 1].cn}`;
     b.title = `${sec}구간 · ${prog}/${words.length} 맞힘`;
-    b.addEventListener('click', () => startGame('PRACTICE', sec));
+    b.addEventListener('click', () => startGame(mode, sec));
     b.dataset.sec = sec;
     grid.appendChild(b);
   }
   const recTile = grid.querySelector(`[data-sec="${rec || 1}"]`);
   if (recTile) recTile.classList.add('rec');
-  $('section-summary').textContent = `완료 ${doneCount}/${SECTION_COUNT}구간 · 맞힌 단어 ${mastered}/${VOCAB_LIST.length}`;
+  $('section-summary').textContent = `${words0(mode)}단어씩 ${total}구간 · 완료 ${doneCount}/${total} · 맞힌 단어 ${mastered}/${VOCAB_LIST.length}`;
   setModeLook('LOBBY');
   showOverlay('section-ui');
   if (recTile) recTile.scrollIntoView({ block: 'nearest' });

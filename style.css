@@ -1615,3 +1615,24 @@ body.portrait .section-modal .modal-sub {
   width: 18px;
   text-align: right;
 }
+/* 로비: 모드 2개 · 헬 구간 그리드 */
+.mode-cards {
+  grid-template-columns: repeat(2, 1fr);
+}
+#section-grid[data-mode='HELL'] {
+  grid-template-columns: repeat(5, 1fr);
+}
+#section-grid[data-mode='HELL'] .sec-tile {
+  padding: 14px 6px 16px;
+}
+#section-grid[data-mode='HELL'] .sec-tile:hover {
+  border-color: #ff3b30;
+  background: rgba(255, 59, 48, 0.12);
+}
+#section-grid[data-mode='HELL'] .sec-tile.rec {
+  border-color: #ff6b3d;
+  box-shadow: 0 0 0 2px rgba(255, 107, 61, 0.5), 0 0 18px rgba(255, 107, 61, 0.45);
+}
+#section-grid[data-mode='HELL'] .sec-bar i {
+  background: #ff6b3d;
+}
