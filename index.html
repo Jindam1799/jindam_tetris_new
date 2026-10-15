@@ -9,16 +9,16 @@
     <link rel="apple-touch-icon" href="icon/icon-192.png" />
     <!-- 카카오톡 등 인앱 브라우저 → Chrome으로 다시 열기 (가장 먼저 실행) -->
     <script src="inapp.js"></script>
-    <title>진담중국어 테트리스</title>
+    <title>词块 HSK4 · 단어블록 테트리스</title>
     <!-- 카카오톡 링크 미리보기 카드 -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="진담중국어 테트리스" />
-    <meta property="og:description" content="블록을 쌓다 보면 중국어 퀴즈가! 汉语方块 — 단어로 쌓고 말로 터뜨려라" />
+    <meta property="og:title" content="词块 HSK4 · 단어블록 테트리스" />
+    <meta property="og:description" content="HSK 4급 1000단어를 블록처럼 쌓고 짝꿍어휘로 터뜨려라! 25단어씩 구간 연습" />
     <meta property="og:url" content="https://jindam1799.github.io/jindam_tetris_new/" />
     <meta property="og:image" content="https://jindam1799.github.io/jindam_tetris_new/icon/icon-512.png" />
     <meta property="og:image:width" content="512" />
     <meta property="og:image:height" content="512" />
-    <meta name="description" content="블록을 쌓다 보면 중국어 퀴즈가! 汉语方块 — 단어로 쌓고 말로 터뜨려라" />
+    <meta name="description" content="HSK 4급 1000단어를 블록처럼 쌓고 짝꿍어휘로 터뜨려라! 25단어씩 구간 연습" />
     <meta name="theme-color" content="#120a24" />
     <link rel="icon" type="image/png" href="icon/icon-192.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -52,8 +52,8 @@
         <div class="brand">
           <img src="icon/icon-192.png" alt="" class="brand-icon" />
           <div>
-            <div class="brand-title">진담중국어 테트리스</div>
-            <div class="brand-sub">汉语方块 · 단어로 쌓고 말로 터뜨려라</div>
+            <div class="brand-title">词块 HSK4</div>
+            <div class="brand-sub">단어블록 테트리스 · HSK 4급 1000단어</div>
           </div>
         </div>
         <div class="top-score"><span>SCORE</span><b id="score-m">0</b></div>
@@ -158,8 +158,8 @@
       <div class="overlay" id="intro-ui">
         <div class="intro-box">
           <img src="icon/icon-512.png" alt="" class="intro-icon" />
-          <h1 class="intro-title">진담중국어<br /><span>테트리스</span></h1>
-          <p class="intro-cn">汉语方块</p>
+          <h1 class="intro-title"><span class="intro-cikuai">词块</span><br /><span>HSK 4</span></h1>
+          <p class="intro-cn">단어블록 테트리스</p>
           <p class="blink" id="intro-hint">아무 키나 누르거나 클릭하세요</p>
         </div>
       </div>
@@ -168,17 +168,17 @@
       <div class="overlay hidden" id="lobby-ui">
         <div class="modal wide">
           <h2 class="modal-title">모드 선택</h2>
-          <p class="modal-sub">블록을 쌓다 보면 중국어 퀴즈가 나와요. 맞히면 아이템, 틀리면 방해 줄!</p>
+          <p class="modal-sub">블록을 쌓다 보면 HSK 4급 퀴즈가 나와요. 맞히면 아이템, 틀리면 방해 줄!</p>
           <div class="mode-cards">
             <button class="mode-card practice" data-mode="PRACTICE">
               <span class="mc-cn">练习</span>
               <span class="mc-text"><span class="mc-name">연습 모드</span>
-              <span class="mc-desc">느린 속도 · 방해 없음<br />퀴즈 시간 넉넉 · 오답도 OK</span></span>
+              <span class="mc-desc">25단어씩 구간 선택<br />느린 속도 · 방해 없음 · 오답 반복</span></span>
             </button>
             <button class="mode-card normal" data-mode="NORMAL">
               <span class="mc-cn">普通</span>
               <span class="mc-text"><span class="mc-name">노멀 모드</span>
-              <span class="mc-desc">기본 속도 · 낙석 이벤트<br />틀리면 방해 줄 +1</span></span>
+              <span class="mc-desc">1000단어 전체 랜덤<br />낙석 이벤트 · 틀리면 방해 줄</span></span>
             </button>
             <button class="mode-card hell" data-mode="HELL">
               <span class="mc-cn">地狱</span>
@@ -194,18 +194,34 @@
         </div>
       </div>
 
+      <!-- 연습 구간 선택 -->
+      <div class="overlay hidden" id="section-ui">
+        <div class="modal wide section-modal">
+          <div class="section-head">
+            <button class="ghost-btn" id="btn-section-back">← 모드</button>
+            <h2 class="modal-title">연습 구간 선택</h2>
+            <span class="section-spacer"></span>
+          </div>
+          <p class="modal-sub" id="section-summary"></p>
+          <div id="section-grid" class="scrollable"></div>
+          <p class="hint">★ = 25단어를 모두 맞힌 구간 · 반짝이는 칸이 다음 추천 구간이에요</p>
+        </div>
+      </div>
+
       <!-- 게임 방법 -->
       <div class="overlay hidden" id="howto-ui">
         <div class="modal wide">
           <h2 class="modal-title">게임 방법</h2>
           <div class="howto-grid">
             <div><h4>🧱 기본</h4><p>가로 줄을 채우면 사라져요. 레벨마다 <b>20줄</b>을 지우면 클리어!</p></div>
-            <div><h4>❓ 퀴즈</h4><p>블록 5개마다 퀴즈가 나와요. 한→중, 중→한, <b>듣기</b> 문제가 섞여 나와요.</p></div>
+            <div><h4>❓ 퀴즈</h4><p>블록 5개마다(연습 모드는 3개) 퀴즈! 한→중, 중→한, <b>듣기</b>, <b>🧩 짝꿍어휘</b> 문제가 섞여 나와요.</p></div>
             <div><h4>🎁 아이템</h4><p>정답 5개를 모으면 아이템 블록!<br />💣 火烧连营 3×3 폭파<br />⏬ 泰山压顶 전부 내려앉기<br />⚡ 一扫而光 바닥 2줄 삭제</p></div>
             <div><h4>🔥 FEVER</h4><p>3문제 연속 정답이면 15초 동안 <b>점수 2배</b>!</p></div>
             <div><h4>⚠️ 방해</h4><p>틀리거나 시간 초과 → 바닥에서 방해 줄이 올라와요. 헬 모드에선 좌우반전·지진도!</p></div>
+            <div><h4>📘 구간 연습</h4><p>연습 모드는 25단어씩 40구간. 틀린 단어는 금방 다시 나오고, 25개를 다 맞히면 ★ 구간 완료!</p></div>
             <div><h4>📒 오답 노트</h4><p>게임이 끝나면 틀린 단어를 발음과 함께 다시 볼 수 있어요.</p></div>
           </div>
+          <p class="credit">단어: HSK 4급 필수 어휘 1000 · 짝꿍어휘는 말하기 연습을 위해 추가한 표현이에요.</p>
           <button class="primary-btn" data-close="howto-ui">확인</button>
         </div>
       </div>

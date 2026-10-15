@@ -1,6 +1,6 @@
 'use strict';
 /* =========================================================
-   진담중국어 테트리스 — script.js
+   词块 HSK4 (단어블록 테트리스) — script.js
    ---------------------------------------------------------
    1. 설정 저장/불러오기
    2. 사운드 (Web Audio 합성 효과음 + BGM mp3)
@@ -309,7 +309,9 @@ const TTS = (() => {
   const synth = window.speechSynthesis;
   let voice = null;
   let voices = [];
-  const PREFS = [/ting[\s-]?ting|婷婷/i, /google.*(普通话|mandarin)/i, /xiaoxiao|晓晓/i, /huihui|慧慧/i, /yaoyao|瑶瑶/i, /kangkang|康康/i];
+  // 1순위 Tingting(고음질 → 기본), 없으면 중국어 여성 음성
+  const PREFS = [/ting[\s-]?ting.*(premium|enhanced|高|增强|优化)/i, /ting[\s-]?ting|婷婷/i, /xiaoxiao|晓晓/i, /google.*(普通话|mandarin)/i, /xiaoyi|晓伊/i, /huihui|慧慧/i, /yaoyao|瑶瑶/i, /lili|丽丽/i];
+  const isMale = (v) => /kangkang|康康|yunxi|云希|yunyang|云扬|yunjian|云健|male|男/i.test(v.name);
   const notMainland = (v) => /HK|TW|yue|粤|香港|台|臺|cantonese/i.test(v.lang + ' ' + v.name);
 
   function choose() {
@@ -324,7 +326,7 @@ const TTS = (() => {
         if (voice) break;
       }
     }
-    if (!voice) voice = voices.find((v) => /zh[-_]CN/i.test(v.lang)) || voices.find((v) => !notMainland(v)) || voices[0];
+    if (!voice) voice = voices.find((v) => /zh[-_]CN/i.test(v.lang) && !isMale(v)) || voices.find((v) => !notMainland(v) && !isMale(v)) || voices[0];
   }
   if (synth) {
     choose();
@@ -339,7 +341,9 @@ const TTS = (() => {
     synth.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = voice ? voice.lang : 'zh-CN';
-    if (voice) u.voice = voice;
+    try {
+      if (voice) u.voice = voice;
+    } catch (e) {}
     u.rate = rate || settings.rate / 100;
     u.pitch = 1.05;
     synth.speak(u);
@@ -499,7 +503,7 @@ function sprite(v, size) {
 
 /* ---------------- 5. 게임 상태 ---------------- */
 const MODE_CFG = {
-  PRACTICE: { speed: (l) => Math.max(350, 900 * Math.pow(0.92, l - 1)), lock: 700, quizEvery: 4, quizTime: 10000, sky: 0, label: '练习 PRACTICE' },
+  PRACTICE: { speed: (l) => Math.max(350, 900 * Math.pow(0.92, l - 1)), lock: 700, quizEvery: 3, quizTime: 10000, sky: 0, label: '练习 PRACTICE' },
   NORMAL: { speed: (l) => Math.max(90, 700 * Math.pow(0.85, l - 1)), lock: 500, quizEvery: 5, quizTime: 7000, sky: 22000, label: '普通 NORMAL' },
   HELL: { speed: (l) => Math.max(55, 380 * Math.pow(0.86, l - 1)), lock: 420, quizEvery: 5, quizTime: 5500, sky: 9000, label: '地狱 HELL' },
 };
@@ -509,7 +513,24 @@ const DAS = 150;
 const ARR = 38;
 const FEVER_MS = 15000;
 
-const G = { state: 'IDLE', mode: 'NORMAL', runId: 0, particles: [], popups: [], trails: [], sky: [] };
+const G = { state: 'IDLE', mode: 'NORMAL', section: 1, runId: 0, particles: [], popups: [], trails: [], sky: [] };
+
+/* 구간(25단어) · 단어별 정답 기록 */
+const SECTION_COUNT = Math.ceil(VOCAB_LIST.length / SECTION_SIZE);
+const MASTER_KEY = 'cikuai_hsk4_mastery';
+const mastery = loadJSON(MASTER_KEY, {});
+const pad4 = (n) => String(n).padStart(4, '0');
+function sectionWords(sec) {
+  const s = (sec - 1) * SECTION_SIZE;
+  return VOCAB_LIST.slice(s, s + SECTION_SIZE);
+}
+function sectionProgress(sec) {
+  return sectionWords(sec).filter((w) => mastery[w.no] > 0).length;
+}
+function markCorrect(w) {
+  mastery[w.no] = (mastery[w.no] || 0) + 1;
+  saveJSON(MASTER_KEY, mastery);
+}
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -524,9 +545,12 @@ function shuffle(a) {
 const cfg = () => MODE_CFG[G.mode];
 const isFever = () => G.feverUntil > G.clock;
 
-function resetGame(mode) {
+function resetGame(mode, section) {
   Object.assign(G, {
     mode,
+    section: section || G.section || 1,
+    qQueue: [],
+    sectionDone: false,
     runId: G.runId + 1,
     board: createBoard(),
     piece: null,
@@ -1021,6 +1045,7 @@ function generateObstacles(lvl) {
 
 /* ---------------- 7. 퀴즈 ---------------- */
 const QUIZ_TYPES = {
+  pair: '🧩 짝꿍어휘',
   kr2cn: '한 → 중',
   cn2kr: '중 → 한',
   listen: '🎧 듣기',
@@ -1029,29 +1054,51 @@ function startQuiz() {
   G.state = 'QUIZ';
   G.softDrop = false;
   BGM.setDuck(0.3);
-  if (!G.quizPool.length) G.quizPool = shuffle([...VOCAB_LIST]);
-  const q = G.quizPool.pop();
+  const q = pickQuizWord();
+  const practice = G.mode === 'PRACTICE';
 
-  const types = ['kr2cn', 'kr2cn', 'cn2kr'];
+  const types = ['kr2cn', 'kr2cn', 'cn2kr', 'pair', 'pair'];
   if (TTS.available && settings.tts && !settings.muted) types.push('listen', 'listen');
   const type = types[Math.floor(Math.random() * types.length)];
 
-  const pool = shuffle(VOCAB_LIST.filter((v) => v.cn !== q.cn && v.kr !== q.kr));
-  // 비슷한 길이의 오답을 우선 (너무 쉽지 않게)
-  pool.sort((a, b) => Math.abs(a.cn.length - q.cn.length) - Math.abs(b.cn.length - q.cn.length));
-  const wrongs = shuffle(pool.slice(0, 6)).slice(0, 2);
-  const options = shuffle([q, ...wrongs]);
-  const correct = options.indexOf(q);
+  // 오답 후보: 연습 모드는 같은 구간 단어에서 먼저 (비슷한 단어끼리 헷갈리게)
+  const base = practice ? sectionWords(G.section) : VOCAB_LIST;
+  let pool = shuffle(base.filter((v) => v.cn !== q.cn && v.kr !== q.kr));
+  if (pool.length < 4) pool = shuffle(VOCAB_LIST.filter((v) => v.cn !== q.cn && v.kr !== q.kr));
+  let options, correct, say, promptKr, pr;
+  if (type === 'pair') {
+    pr = q.pairs[Math.floor(Math.random() * q.pairs.length)];
+    const wrongs = [];
+    for (const v of pool) {
+      const c = v.pairs[Math.floor(Math.random() * v.pairs.length)];
+      if (c.cn !== pr.cn && c.kr !== pr.kr && !wrongs.some((w) => w.cn === c.cn)) wrongs.push(c);
+      if (wrongs.length === 2) break;
+    }
+    options = shuffle([pr, ...wrongs]);
+    correct = options.indexOf(pr);
+    say = pr.cn;
+    promptKr = pr.kr;
+  } else {
+    // 비슷한 길이의 오답을 우선 (너무 쉽지 않게)
+    pool.sort((a, b) => Math.abs(a.cn.length - q.cn.length) - Math.abs(b.cn.length - q.cn.length));
+    const wrongs = shuffle(pool.slice(0, 6)).slice(0, 2);
+    options = shuffle([q, ...wrongs]);
+    correct = options.indexOf(q);
+    say = q.cn;
+  }
 
-  G.quiz = { q, type, options, correct, start: performance.now(), dur: cfg().quizTime, answered: false, lastTick: 99 };
+  G.quiz = { q, pr, say, type, options, correct, start: performance.now(), dur: cfg().quizTime, answered: false, lastTick: 99 };
 
   $('quiz-type').textContent = QUIZ_TYPES[type];
   $('quiz-streak').textContent = G.streak > 0 ? `连对 ×${G.streak}` : '';
   const word = $('quiz-word');
   const sub = $('quiz-sub');
   word.className = '';
-  $('quiz-listen').classList.toggle('hidden', type === 'kr2cn');
-  if (type === 'kr2cn') {
+  $('quiz-listen').classList.toggle('hidden', type === 'kr2cn' || type === 'pair');
+  if (type === 'pair') {
+    word.textContent = promptKr;
+    sub.textContent = `「${q.cn}」 짝꿍어휘를 고르세요`;
+  } else if (type === 'kr2cn') {
     word.textContent = q.kr;
     sub.textContent = '알맞은 중국어를 고르세요';
   } else if (type === 'cn2kr') {
@@ -1074,7 +1121,7 @@ function startQuiz() {
     num.textContent = i + 1;
     const main = document.createElement('span');
     main.className = 'main';
-    if (type === 'kr2cn') {
+    if (type === 'kr2cn' || type === 'pair') {
       main.classList.add('cn');
       main.textContent = o.cn;
       const py = document.createElement('span');
@@ -1091,7 +1138,16 @@ function startQuiz() {
   $('quiz-timer-fill').style.width = '100%';
   showOverlay('quiz-ui');
   S.quiz();
-  if (type !== 'kr2cn') setTimeout(() => G.state === 'QUIZ' && TTS.speak(q.cn), 300);
+  if (type === 'cn2kr' || type === 'listen') setTimeout(() => G.state === 'QUIZ' && TTS.speak(say), 300);
+}
+function pickQuizWord() {
+  if (G.mode === 'PRACTICE') {
+    // 구간 25단어를 한 바퀴씩, 틀린 단어는 2문제 뒤에 다시
+    if (!G.qQueue.length) G.qQueue = shuffle(sectionWords(G.section).slice());
+    return G.qQueue.shift();
+  }
+  if (!G.quizPool.length) G.quizPool = shuffle([...VOCAB_LIST]);
+  return G.quizPool.pop();
 }
 function updateQuiz(now) {
   const z = G.quiz;
@@ -1112,6 +1168,9 @@ function answerQuiz(i) {
   const ok = i === z.correct;
   const btns = document.querySelectorAll('#quiz-options .opt');
   btns.forEach((b, k) => b.classList.add(k === z.correct ? 'correct' : k === i ? 'wrong' : 'dim'));
+  if (z.type === 'pair') {
+    $('quiz-sub').textContent = `${z.pr.cn} · ${z.pr.py}`;
+  }
   if (z.type === 'listen') {
     $('quiz-word').textContent = z.q.cn;
     $('quiz-word').className = 'cn';
@@ -1125,6 +1184,16 @@ function answerQuiz(i) {
     G.quizRight++;
     G.lvQuizRight++;
     G.streak++;
+    markCorrect(z.q);
+    if (practice && !G.sectionDone && sectionProgress(G.section) >= sectionWords(G.section).length) {
+      G.sectionDone = true;
+      const run = G.runId;
+      setTimeout(() => {
+        if (run !== G.runId) return;
+        S.levelUp();
+        showAction('完成!', `${G.section}구간 25단어 모두 맞혔어요`, '#ffc94a');
+      }, 1300);
+    }
     const frac = Math.max(0, 1 - (performance.now() - z.start) / z.dur);
     let pts = Math.round((50 + 150 * frac) * G.level);
     if (isFever()) pts *= 2;
@@ -1142,9 +1211,10 @@ function answerQuiz(i) {
     G.streak = 0;
     if (!practice) G.gauge = 0;
     G.missed.set(z.q.cn, z.q);
+    if (practice) G.qQueue.splice(Math.min(2, G.qQueue.length), 0, z.q);
     showNotice(i < 0 ? '超时!' : '答错!', '#ff4d5e');
   }
-  setTimeout(() => TTS.speak(z.q.cn), 200);
+  setTimeout(() => TTS.speak(z.say), 200);
   updateHUD();
   const run = G.runId;
   setTimeout(
@@ -1405,6 +1475,7 @@ function updateHUD() {
   const chips = [];
   if (G.reversedUntil > G.clock) chips.push(`<span class="chip" style="color:#ff4d5e">⇄ 좌우반전 ${Math.ceil((G.reversedUntil - G.clock) / 1000)}</span>`);
   if (fever) chips.push(`<span class="chip" style="color:#ffc94a">🔥 FEVER ×2</span>`);
+  if (G.mode === 'PRACTICE') chips.push(`<span class="chip" style="color:#2de0a7">📘 ${G.section}구간 ${sectionProgress(G.section)}/${sectionWords(G.section).length}</span>`);
   const html = chips.join('');
   const box = $('status-chips');
   if (box.innerHTML !== html) box.innerHTML = html;
@@ -1548,6 +1619,10 @@ document.addEventListener('keydown', (e) => {
   if (code === 'KeyM' && !e.repeat) return toggleMute();
 
   // 설정 / 방법 / 랭킹 창 닫기
+  if (anyOpen('section-ui')) {
+    if (code === 'Escape') $('btn-section-back').click();
+    return;
+  }
   for (const id of ['settings-ui', 'howto-ui', 'ranking-ui']) {
     if (anyOpen(id)) {
       if (code === 'Escape' || (code === 'Enter' && id !== 'ranking-ui')) hideOverlay(id);
@@ -1563,7 +1638,7 @@ document.addEventListener('keydown', (e) => {
   if (G.state === 'QUIZ') {
     const idx = { Digit1: 0, Digit2: 1, Digit3: 2, Numpad1: 0, Numpad2: 1, Numpad3: 2 }[code];
     if (idx !== undefined) answerQuiz(idx);
-    if (code === 'KeyR' && G.quiz && G.quiz.type !== 'kr2cn') TTS.speak(G.quiz.q.cn);
+    if (code === 'KeyR' && G.quiz && (G.quiz.type === 'listen' || G.quiz.type === 'cn2kr')) TTS.speak(G.quiz.say);
     return;
   }
   if (G.state === 'LEVEL_CLEAR') {
@@ -1633,7 +1708,7 @@ window.addEventListener('blur', () => {
 });
 
 /* ---------------- 10. 화면 전환 ---------------- */
-const OVERLAYS = ['intro-ui', 'lobby-ui', 'howto-ui', 'quiz-ui', 'pause-ui', 'level-clear-ui', 'game-over-ui', 'ranking-ui', 'settings-ui'];
+const OVERLAYS = ['intro-ui', 'lobby-ui', 'section-ui', 'howto-ui', 'quiz-ui', 'pause-ui', 'level-clear-ui', 'game-over-ui', 'ranking-ui', 'settings-ui'];
 function showOverlay(id) {
   $(id).classList.remove('hidden');
 }
@@ -1645,7 +1720,7 @@ function hideAll() {
 }
 function setModeLook(mode) {
   document.body.dataset.mode = mode;
-  $('mode-badge').textContent = mode === 'LOBBY' ? 'LOBBY' : MODE_CFG[mode].label;
+  $('mode-badge').textContent = mode === 'LOBBY' ? 'LOBBY' : mode === 'PRACTICE' ? `练习 ${G.section}구간` : MODE_CFG[mode].label;
 }
 
 function closeIntro() {
@@ -1672,10 +1747,11 @@ function showLobby() {
   BGM.setDuck(1);
   BGM.play('lobby');
 }
-function startGame(mode) {
+function startGame(mode, section) {
+  if (mode === 'PRACTICE' && !section) return openSections();
   if (document.activeElement) document.activeElement.blur();
   hideAll();
-  resetGame(mode);
+  resetGame(mode, section);
   setModeLook(mode);
   boardWrap.className = '';
   updateHUD();
@@ -1806,6 +1882,44 @@ function gameOver() {
     if (canRank) $('player-name').focus();
   }, 1000);
 }
+
+/* ---------------- 연습 구간 선택 ---------------- */
+function openSections() {
+  hideAll();
+  const grid = $('section-grid');
+  grid.innerHTML = '';
+  let rec = 0, doneCount = 0, mastered = 0;
+  for (let sec = 1; sec <= SECTION_COUNT; sec++) {
+    const words = sectionWords(sec);
+    const prog = sectionProgress(sec);
+    mastered += prog;
+    const done = prog >= words.length;
+    if (done) doneCount++;
+    else if (!rec) rec = sec;
+    const b = document.createElement('button');
+    b.className = 'sec-tile' + (done ? ' done' : prog ? ' partial' : '');
+    b.style.setProperty('--p', (prog / words.length).toFixed(3));
+    b.innerHTML =
+      `<span class="sec-no">${done ? '★' : sec}</span>` +
+      `<span class="sec-range">${pad4(words[0].no)}–${pad4(words[words.length - 1].no)}</span>` +
+      `<span class="sec-cn"></span><span class="sec-bar"><i></i></span>`;
+    b.querySelector('.sec-cn').textContent = `${words[0].cn} … ${words[words.length - 1].cn}`;
+    b.title = `${sec}구간 · ${prog}/${words.length} 맞힘`;
+    b.addEventListener('click', () => startGame('PRACTICE', sec));
+    b.dataset.sec = sec;
+    grid.appendChild(b);
+  }
+  const recTile = grid.querySelector(`[data-sec="${rec || 1}"]`);
+  if (recTile) recTile.classList.add('rec');
+  $('section-summary').textContent = `완료 ${doneCount}/${SECTION_COUNT}구간 · 맞힌 단어 ${mastered}/${VOCAB_LIST.length}`;
+  setModeLook('LOBBY');
+  showOverlay('section-ui');
+  if (recTile) recTile.scrollIntoView({ block: 'nearest' });
+}
+$('btn-section-back').addEventListener('click', () => {
+  hideOverlay('section-ui');
+  showOverlay('lobby-ui');
+});
 
 /* ---------------- 랭킹 ---------------- */
 const rankKey = (m) => `tetris_rank_${m}`;
@@ -1959,9 +2073,9 @@ $('btn-home').addEventListener('click', () => {
   else if (G.state !== 'PAUSED' && G.state !== 'QUIZ') showLobby();
 });
 $('next-level-btn').addEventListener('click', nextLevel);
-$('retry-btn').addEventListener('click', () => startGame(G.mode));
+$('retry-btn').addEventListener('click', () => startGame(G.mode, G.section));
 $('restart-btn').addEventListener('click', showLobby);
-$('quiz-listen').addEventListener('click', () => G.quiz && TTS.speak(G.quiz.q.cn));
+$('quiz-listen').addEventListener('click', () => G.quiz && TTS.speak(G.quiz.say));
 $('intro-ui').addEventListener('click', closeIntro);
 document.querySelectorAll('button').forEach((b) => b.addEventListener('mousedown', () => S.ui()));
 
