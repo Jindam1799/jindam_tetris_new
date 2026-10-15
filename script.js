@@ -43,9 +43,17 @@ const Sound = (() => {
   let master = null;
   let noiseBuf = null;
 
+  // 아이폰은 음성(TTS)·전화·알림이 나오면 오디오가 'interrupted'(중단) 상태가 됨 → 'running'이 아니면 무조건 다시 켬
+  function ensure() {
+    if (ctx && ctx.state !== 'running') ctx.resume().catch(() => {});
+  }
   function init() {
+    try {
+      // iOS 17+: 무음 스위치와 상관없이 게임 소리로 재생, 다른 소리에 덜 끊기게
+      if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback';
+    } catch (e) {}
     if (ctx) {
-      if (ctx.state === 'suspended') ctx.resume();
+      ensure();
       return;
     }
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -132,17 +140,26 @@ const Sound = (() => {
       noise(0.09, { vol: 0.22, freq: 1600, to: 200 });
     },
     lock: () => {
-      tone(240, 0.06, { type: 'triangle', vol: 0.13, to: 150 });
-      noise(0.03, { vol: 0.07, freq: 3000 });
+      tone(240, 0.07, { type: 'triangle', vol: 0.2, to: 140 });
+      noise(0.035, { vol: 0.1, freq: 3000 });
     },
     hold: () => {
       tone(500, 0.07, { vol: 0.14, to: 900 });
       tone(900, 0.08, { vol: 0.1, to: 600, delay: 0.06 });
     },
+    // 줄 삭제: 쨍(유리 깨짐) + 펀치 + 줄 수만큼 올라가는 종소리 (콤보마다 음이 높아짐)
     clear: (lines, combo) => {
       const b = Math.min(Math.max(combo, 0), 9);
-      for (let i = 0; i <= lines; i++) bell(pn(b + i), 0.35, 0.15, i * 0.055);
-      noise(0.25, { vol: 0.06, freq: 5000, type: 'highpass' });
+      noise(0.32, { vol: 0.32, freq: 7500, to: 900, type: 'bandpass', q: 1.1 });
+      noise(0.12, { vol: 0.12, freq: 9000, type: 'highpass' });
+      tone(170, 0.2, { vol: 0.42, to: 55 });
+      for (let i = 0; i <= lines; i++) bell(pn(b + i * 2), 0.45, 0.22, 0.03 + i * 0.065);
+      for (let k = 0; k < 3; k++) tone(pn(b + 8 + k) * 2, 0.12, { type: 'triangle', vol: 0.06, delay: 0.14 + k * 0.05 });
+    },
+    // 줄이 사라진 뒤 위 블록들이 내려앉는 '쿵'
+    collapse: (lines) => {
+      tone(120, 0.22, { vol: 0.3 + Math.min(lines, 4) * 0.04, to: 45 });
+      noise(0.12, { vol: 0.14, freq: 700, to: 150 });
     },
     tetris: (combo) => {
       const b = Math.min(Math.max(combo, 0), 5);
@@ -212,7 +229,7 @@ const Sound = (() => {
     },
     ui: () => tone(700, 0.04, { vol: 0.08 }),
   };
-  return { init, setVolume, sfx, ctx: () => ctx };
+  return { init, ensure, setVolume, sfx, ctx: () => ctx };
 })();
 const S = Sound.sfx;
 
@@ -233,6 +250,7 @@ const BGM = (() => {
   let duck = 1;
   let gain = null; // 아이폰은 audio.volume이 안 먹혀서 Web Audio로 볼륨 조절
   let fadeId = 0;
+  let want = false; // 지금 음악이 나와야 하는 상태인지
   const target = () => (settings.muted ? 0 : (settings.bgm / 100) * 0.6 * duck);
   const setVol = (v) => {
     v = Math.max(0, Math.min(1, v));
@@ -274,6 +292,7 @@ const BGM = (() => {
     const start = () => {
       el.src = src;
       setVol(0);
+      want = true;
       el.play().catch(() => {});
       fade(target(), 700);
     };
@@ -285,7 +304,13 @@ const BGM = (() => {
     attach,
     stop() {
       curKey = '';
+      want = false;
       fade(0, 300, () => el.pause());
+    },
+    // 아이폰이 음성·알림 때문에 음악을 멈춰 버렸으면 다시 재생
+    keepAlive() {
+      if (want && curKey && el.paused && !document.hidden) el.play().catch(() => {});
+      if (want && curKey && !el.paused && getVol() < 0.01 && target() > 0) fade(target(), 400);
     },
     setDuck(d) {
       duck = d;
@@ -296,10 +321,14 @@ const BGM = (() => {
       setVol(target());
     },
     pause() {
+      want = false;
       el.pause();
     },
     resume() {
-      if (curKey) el.play().catch(() => {});
+      if (curKey) {
+        want = true;
+        el.play().catch(() => {});
+      }
     },
   };
 })();
@@ -346,6 +375,13 @@ const TTS = (() => {
     } catch (e) {}
     u.rate = rate || settings.rate / 100;
     u.pitch = 1.05;
+    u.onend = u.onerror = () => {
+      Sound.ensure();
+      setTimeout(() => {
+        Sound.ensure();
+        BGM.keepAlive();
+      }, 150);
+    };
     synth.speak(u);
   }
   // 아이폰은 첫 터치 때 한 번 말을 시켜야 이후 음성이 나옴
@@ -1617,6 +1653,7 @@ function loop(now) {
   else if (G.state === 'CLEARING') {
     G.clearing.t += dt;
     if (G.clearing.t >= CLEAR_MS) {
+      S.collapse(G.clearing.rows.length);
       removeRows(G.clearing.rows);
       G.clearing = null;
       if (G.board.every((r) => r.every((v) => !v))) {
@@ -2407,6 +2444,20 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden) Sound.init();
 });
 if (window.visualViewport) window.visualViewport.addEventListener('resize', fit);
+// 소리 지킴이: 아이폰에서 소리가 끊겨도 1초 안에 자동 복구
+setInterval(() => {
+  if (document.hidden) return;
+  Sound.ensure();
+  if (G.state !== 'PAUSED') BGM.keepAlive();
+}, 1000);
+document.addEventListener(
+  'pointerdown',
+  () => {
+    Sound.ensure();
+    if (G.state !== 'PAUSED') BGM.keepAlive();
+  },
+  true,
+);
 window.addEventListener('orientationchange', () => setTimeout(fit, 250));
 
 // PC에서 Chrome이 아닐 때만 안내 (휴대폰·태블릿은 기본 브라우저로도 잘 동작)
