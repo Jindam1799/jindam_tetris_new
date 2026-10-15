@@ -1,4 +1,4 @@
-/*! 词块 HSK4 · 단어블록 테트리스 | © 2026 진담중국어. All rights reserved. 무단 복제·배포 금지 */
+/*! 진담 HSK 테트리스 | © 2026 진담중국어. All rights reserved. 무단 복제·배포 금지 */
 /* =========================================================
    디자인: "장난감 블록 스티커"
    맑은 하늘 + 굵은 남색 테두리 + 아래로 떨어지는 단단한 그림자
@@ -2080,4 +2080,127 @@ body.portrait .lobby-links {
 }
 body.portrait #rank-list {
   height: 420px;
+}
+
+/* =========================================================
+   진담 HSK 테트리스: 처음 화면 이름 · 급수 선택
+   ========================================================= */
+.intro-name {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 10px 0 0;
+  font-weight: 400;
+}
+.intro-jindam {
+  padding: 4px 20px;
+  border: var(--bd);
+  border-radius: 999px;
+  background: var(--coral);
+  box-shadow: 0 4px 0 var(--ink);
+  font-family: var(--font-ui);
+  font-size: 30px;
+  color: #fff;
+  -webkit-text-stroke: 5px var(--ink);
+  paint-order: stroke fill;
+  transform: rotate(-3deg);
+}
+.intro-name .intro-title {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin: 18px 0 0;
+}
+.intro-name .tile {
+  width: 120px;
+  height: 120px;
+  border-radius: 26px;
+  font-family: var(--font-ui);
+  font-size: 84px;
+}
+.t3 {
+  background: var(--blue);
+  color: #fff;
+  -webkit-text-stroke: 7px var(--ink);
+  paint-order: stroke fill;
+  transform: rotate(-4deg) translateY(4px);
+}
+.t2 {
+  transform: rotate(5deg) translateY(12px);
+}
+.intro-tetris {
+  margin-top: 26px;
+  font-family: var(--font-ui);
+  font-size: 66px;
+  line-height: 1;
+  color: var(--sun);
+  -webkit-text-stroke: 10px var(--ink);
+  paint-order: stroke fill;
+  filter: drop-shadow(0 6px 0 var(--ink));
+}
+.intro-name + .intro-hsk {
+  margin: 26px 0 26px;
+  font-size: 22px;
+}
+body.portrait .intro-name .tile {
+  width: 110px;
+  height: 110px;
+  font-size: 76px;
+}
+body.portrait .intro-tetris {
+  font-size: 60px;
+}
+body.portrait .intro-name + .intro-hsk {
+  font-size: 19px;
+}
+
+.hsk-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0 6px;
+}
+.hsk-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 92px;
+  padding: 5px 12px 6px;
+  border: var(--bd);
+  border-radius: 14px;
+  background: var(--paper);
+  box-shadow: 0 3px 0 var(--ink);
+  line-height: 1.15;
+}
+.hsk-tab b {
+  font-weight: 400;
+  font-size: 17px;
+}
+.hsk-tab small {
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.hsk-tab.active {
+  background: var(--sun);
+}
+.hsk-tab.soon {
+  border-color: #a7a2c4;
+  background: #ebe8f5;
+  box-shadow: 0 3px 0 #a7a2c4;
+  color: #8d88ab;
+  cursor: not-allowed;
+}
+body.portrait .lobby-head {
+  align-items: flex-start;
+}
+body.portrait .hsk-tab {
+  min-width: 0;
+  flex: 1;
+  padding: 5px 8px 6px;
+}
+body.portrait .hsk-tabs {
+  margin: 6px 0 0;
+}
+body.portrait .lobby-links {
+  margin-top: 14px;
 }

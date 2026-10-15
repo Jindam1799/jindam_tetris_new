@@ -1,6 +1,6 @@
-/*! 词块 HSK4 · 단어블록 테트리스 | © 2026 진담중국어. All rights reserved. 무단 복제·배포 금지 */
+/*! 진담 HSK 테트리스 | © 2026 진담중국어. All rights reserved. 무단 복제·배포 금지 */
 // =========================================================
-// 词块 HSK4 — 단어 데이터
+// 진담 HSK 테트리스 — HSK 4급 단어 데이터
 // HSK 4급 필수 어휘 1000개 + 단어마다 짝꿍어휘 3개
 // (출처: 「HSK 4급 단어와 짝꿍어휘」 단어장)
 //
@@ -1011,3 +1011,7 @@ const VOCAB_LIST = [
   {no:999,cn:"作用",py:"zuòyòng",kr:"작용, 역할",pairs:[{cn:"起作用",py:"qǐ zuòyòng",kr:"효과가 있다"},{cn:"重要作用",py:"zhòngyào zuòyòng",kr:"중요한 역할"},{cn:"作用很大",py:"zuòyòng hěn dà",kr:"작용이 크다"}]},
   {no:1000,cn:"作者",py:"zuòzhě",kr:"작가, 저자",pairs:[{cn:"文章作者",py:"wénzhāng zuòzhě",kr:"글의 저자"},{cn:"小说作者",py:"xiǎoshuō zuòzhě",kr:"소설의 작가"},{cn:"作者介绍",py:"zuòzhě jièshào",kr:"작가 소개"}]},
 ];
+
+// 급수 등록 (5급·6급은 data5.js, data6.js에서 같은 방식으로 등록)
+window.HSK_SETS = window.HSK_SETS || {};
+HSK_SETS[4] = { level: 4, title: 'HSK 4급', words: VOCAB_LIST };

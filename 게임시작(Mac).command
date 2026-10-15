@@ -1,5 +1,5 @@
 #!/bin/bash
-# 词块 HSK4 (단어블록 테트리스) — Mac에서 항상 Chrome 앱 창으로 실행
+# 진담 HSK 테트리스 — Mac에서 항상 Chrome 앱 창으로 실행
 DIR="$(cd "$(dirname "$0")" && pwd)"
 URL="file://${DIR// /%20}/index.html"
 if [ -d "/Applications/Google Chrome.app" ] || [ -d "$HOME/Applications/Google Chrome.app" ]; then

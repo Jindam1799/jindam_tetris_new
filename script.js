@@ -1,7 +1,7 @@
-/*! 词块 HSK4 · 단어블록 테트리스 | © 2026 진담중국어. All rights reserved. 무단 복제·배포 금지 */
+/*! 진담 HSK 테트리스 | © 2026 진담중국어. All rights reserved. 무단 복제·배포 금지 */
 'use strict';
 /* =========================================================
-   词块 HSK4 (단어블록 테트리스) — script.js
+   진담 HSK 테트리스 — script.js
    ---------------------------------------------------------
    1. 설정 저장/불러오기
    2. 사운드 (Web Audio 합성 효과음 + BGM mp3)
@@ -683,14 +683,30 @@ const G = { state: 'IDLE', mode: 'NORMAL', section: 1, runId: 0, particles: [], 
 // 노멀 = 25단어씩 40구간, 헬 = 100단어씩 10구간
 const SEC_SIZE = { NORMAL: SECTION_SIZE, HELL: 100 };
 const secSize = (mode = G.mode) => SEC_SIZE[mode] || SECTION_SIZE;
-const secCount = (mode = G.mode) => Math.ceil(VOCAB_LIST.length / secSize(mode));
-const MASTER_KEY = 'cikuai_hsk4_mastery';
-const mastery = loadJSON(MASTER_KEY, {});
+const secCount = (mode = G.mode) => Math.ceil(WORDS.length / secSize(mode));
+
+/* ---------------- HSK 급수 ----------------
+   단어 파일(data.js=4급, data5.js=5급, data6.js=6급)이 HSK_SETS에 등록돼요.
+   단어가 들어 있는 급수만 열리고, 비어 있으면 '준비 중'으로 보여요.
+   기록(진행·정답·랭킹)은 급수마다 따로 저장돼요. */
+const HSK_LEVELS = [4, 5, 6];
+const hskReady = (n) => !!(window.HSK_SETS && HSK_SETS[n] && HSK_SETS[n].words && HSK_SETS[n].words.length);
+let HSK = loadJSON('jindam_hsk_level', 4);
+if (!hskReady(HSK)) HSK = 4;
+let WORDS = HSK_SETS[HSK].words;
+const lvKey = (name) => `cikuai_hsk${HSK}_${name}`; // 4급은 예전 기록 이름 그대로 유지
+let mastery = {};
+let progress = {};
+function loadLevelData() {
+  mastery = loadJSON(lvKey('mastery'), {});
+  progress = Object.assign({ NORMAL: { unlocked: 1, best: null }, HELL: { unlocked: 1, best: null } }, loadJSON(lvKey('stages'), {}));
+}
+loadLevelData();
 const pad4 = (n) => String(n).padStart(4, '0');
 function sectionWords(sec, mode = G.mode) {
   const n = secSize(mode);
   const s = (sec - 1) * n;
-  return VOCAB_LIST.slice(s, s + n);
+  return WORDS.slice(s, s + n);
 }
 function sectionProgress(sec, mode = G.mode) {
   return sectionWords(sec, mode).filter((w) => mastery[w.no] > 0).length;
@@ -723,9 +739,7 @@ function difficulty(mode, stage) {
     quizTime: Math.round(7500 - 1500 * t),
   };
 }
-const PROGRESS_KEY = 'cikuai_hsk4_stages';
-const progress = Object.assign({ NORMAL: { unlocked: 1, best: null }, HELL: { unlocked: 1, best: null } }, loadJSON(PROGRESS_KEY, {}));
-const saveProgress = () => saveJSON(PROGRESS_KEY, progress);
+const saveProgress = () => saveJSON(lvKey('stages'), progress);
 function unlockStage(mode, stage) {
   const p = progress[mode];
   if (stage > p.unlocked) {
@@ -739,7 +753,7 @@ const isCleared = (mode, stage) => stage < progress[mode].unlocked;
 const continueStage = (mode) => Math.min(progress[mode].unlocked, secCount(mode));
 function markCorrect(w) {
   mastery[w.no] = (mastery[w.no] || 0) + 1;
-  saveJSON(MASTER_KEY, mastery);
+  saveJSON(lvKey('mastery'), mastery);
 }
 
 function createBoard() {
@@ -1278,7 +1292,7 @@ function startQuiz() {
   // 오답 후보: 연습 모드는 같은 구간 단어에서 먼저 (비슷한 단어끼리 헷갈리게)
   const base = sectionWords(G.section);
   let pool = shuffle(base.filter((v) => v.cn !== q.cn && v.kr !== q.kr));
-  if (pool.length < 4) pool = shuffle(VOCAB_LIST.filter((v) => v.cn !== q.cn && v.kr !== q.kr));
+  if (pool.length < 4) pool = shuffle(WORDS.filter((v) => v.cn !== q.cn && v.kr !== q.kr));
   let options, correct, say, promptKr, pr;
   if (type === 'pair') {
     pr = q.pairs[Math.floor(Math.random() * q.pairs.length)];
@@ -1928,7 +1942,7 @@ function hideAll() {
 }
 function setModeLook(mode) {
   document.body.dataset.mode = mode;
-  $('mode-badge').textContent = mode === 'LOBBY' ? '모드 고르기' : `${MODE_CFG[mode].label.split(' ')[0]} STAGE ${G.section}`;
+  $('mode-badge').textContent = mode === 'LOBBY' ? '모드 고르기' : `${HSK}급 ${MODE_CFG[mode].label.split(' ')[0]} STAGE ${G.section}`;
 }
 
 function closeIntro() {
@@ -2177,7 +2191,7 @@ $('btn-section-back').addEventListener('click', () => {
 });
 
 /* ---------------- 랭킹 ---------------- */
-const rankKey = (m) => `cikuai_hsk4_rank_${m}`;
+const rankKey = (m) => lvKey(`rank_${m}`);
 const rankSort = (a, b) => b.stage - a.stage || b.score - a.score;
 function getRankings(mode) {
   const r = loadJSON(rankKey(mode), []);
@@ -2209,7 +2223,7 @@ const scoreFor = (mode, st) => (mode === 'HELL' ? 15000 : 4500) * ((st * (st + 1
 function rivalBoard(mode) {
   const now = Date.now();
   const day = Math.floor((now - RIVAL_START) / 86400000);
-  const rnd = seeded(mode === 'HELL' ? 7771 : 4242);
+  const rnd = seeded((mode === 'HELL' ? 7771 : 4242) + (HSK - 4) * 1013); // 급수마다 다른 친구들
   const n = mode === 'HELL' ? 24 : 40;
   const max = secCount(mode);
   const list = [];
@@ -2411,13 +2425,44 @@ document.querySelectorAll('.mode-card').forEach((card) => {
   card.querySelector('.mc-play').addEventListener('click', () => startGame(mode, continueStage(mode)));
   card.querySelector('.mc-map').addEventListener('click', () => openSections(mode));
 });
+function renderHskTabs() {
+  const box = $('hsk-tabs');
+  if (!box) return;
+  box.innerHTML = '';
+  HSK_LEVELS.forEach((n) => {
+    const b = document.createElement('button');
+    const ready = hskReady(n);
+    b.className = 'hsk-tab' + (n === HSK ? ' active' : '') + (ready ? '' : ' soon');
+    b.disabled = !ready;
+    b.innerHTML = `<b>HSK ${n}급</b><small>${ready ? HSK_SETS[n].words.length + '단어' : '준비 중'}</small>`;
+    if (ready) b.addEventListener('click', () => setHsk(n));
+    box.appendChild(b);
+  });
+}
+function setHsk(n) {
+  if (!hskReady(n) || n === HSK) return;
+  HSK = n;
+  WORDS = HSK_SETS[n].words;
+  saveJSON('jindam_hsk_level', n);
+  loadLevelData();
+  S.ui();
+  updateBrand();
+  renderLobby();
+}
+function updateBrand() {
+  const el = $('brand-sub');
+  if (el) el.textContent = `HSK ${HSK}급 단어 ${WORDS.length}개`;
+}
 function renderLobby() {
+  renderHskTabs();
+  updateBrand();
   document.querySelectorAll('.mode-card').forEach((card) => {
     const mode = card.dataset.mode;
     const total = secCount(mode);
     const cleared = Math.min(progress[mode].unlocked - 1, total);
     const cur = continueStage(mode);
     card.querySelector('.mc-unlocked').textContent = `${cleared} / ${total}`;
+    card.querySelector('.mc-desc').textContent = `${secSize(mode)}단어씩 ${total}스테이지`;
     card.querySelector('.mc-bar i').style.width = (cleared / total) * 100 + '%';
     const best = progress[mode].best;
     card.querySelector('.mc-best').textContent = best ? `최고 기록: STAGE ${best.stage}${best.clear ? ' 모두 클리어' : ''}, ${Number(best.score).toLocaleString()}점` : '최고 기록 없음';
