@@ -63,21 +63,21 @@
     box.setAttribute(
       'style',
       'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;' +
-        'background:radial-gradient(circle at center,#28143c,#07040e 75%);color:#f5efe6;' +
-        "font-family:'Noto Sans KR','Malgun Gothic','Apple SD Gothic Neo',sans-serif;text-align:center;",
+        'background:linear-gradient(180deg,#7ccbff,#e9f8ff);color:#2b2a4c;' +
+        "font-family:'Jua','Apple SD Gothic Neo','Malgun Gothic',sans-serif;text-align:center;",
     );
     var menuHint = isIOS
       ? '오른쪽 아래 <b>⋯</b> 또는 <b>공유</b> 버튼 → <b>다른 브라우저로 열기</b>'
       : '오른쪽 위 <b>⋮</b> 메뉴 → <b>다른 브라우저로 열기</b>';
     box.innerHTML =
       '<div style="max-width:360px">' +
-      '<img src="icon/icon-192.png" alt="" style="width:96px;height:96px;border-radius:24px;box-shadow:0 10px 30px rgba(255,77,94,.35)">' +
+      '<img src="icon/icon-192.png" alt="" style="width:100px;height:100px;border-radius:26px;border:4px solid #2b2a4c;box-shadow:0 6px 0 #2b2a4c">' +
       '<h2 style="margin:18px 0 8px;font-size:22px">Chrome에서 열어 주세요</h2>' +
-      '<p style="margin:0 0 22px;font-size:14px;line-height:1.7;color:#cfc6e4">카카오톡 안에서는 소리와 중국어 음성이 제대로 나오지 않아요.<br>Chrome이 열렸다면 이 창은 닫아도 돼요.</p>' +
-      '<button id="inapp-open" style="display:block;width:100%;padding:15px;border:none;border-radius:14px;font-size:17px;font-weight:900;color:#1a0d00;background:linear-gradient(180deg,#ffe08a,#ffc94a 60%,#e3a521);box-shadow:0 5px 0 #a8730c">Chrome으로 열기</button>' +
-      '<button id="inapp-copy" style="display:block;width:100%;margin-top:12px;padding:13px;border-radius:14px;font-size:15px;font-weight:700;color:#f5efe6;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.2)">🔗 링크 복사하기</button>' +
-      '<p style="margin:18px 0 0;font-size:13px;line-height:1.7;color:#a99fc2">그래도 안 되면 ' + menuHint + '</p>' +
-      '<button id="inapp-stay" style="margin-top:14px;background:none;border:none;color:#7d739a;font-size:12px;text-decoration:underline">그냥 여기서 할게요</button>' +
+      '<p style="margin:0 0 22px;font-size:14px;line-height:1.7;color:#4b4870">카카오톡 안에서는 소리와 중국어 음성이 제대로 나오지 않아요.<br>Chrome이 열렸다면 이 창은 닫아도 돼요.</p>' +
+      '<button id="inapp-open" style="display:block;width:100%;padding:15px;border:none;border-radius:14px;font-size:17px;font-weight:900;color:#2b2a4c;background:#ffd23f;border:3px solid #2b2a4c;box-shadow:0 5px 0 #2b2a4c">Chrome으로 열기</button>' +
+      '<button id="inapp-copy" style="display:block;width:100%;margin-top:12px;padding:13px;border-radius:14px;font-size:15px;font-weight:700;color:#2b2a4c;background:#fff;border:3px solid #2b2a4c;box-shadow:0 4px 0 #2b2a4c">링크 복사하기</button>' +
+      '<p style="margin:18px 0 0;font-size:13px;line-height:1.7;color:#4b4870">그래도 안 되면 ' + menuHint + '</p>' +
+      '<button id="inapp-stay" style="margin-top:14px;background:none;border:none;color:#4b4870;font-size:13px;text-decoration:underline">그냥 여기서 할게요</button>' +
       '</div>';
     document.body.appendChild(box);
     document.getElementById('inapp-open').onclick = openChrome;
@@ -87,7 +87,7 @@
     document.getElementById('inapp-copy').onclick = function () {
       var btn = this;
       function done() {
-        btn.textContent = '✅ 복사됐어요! Chrome 주소창에 붙여 넣으세요';
+        btn.textContent = '복사됐어요! Chrome 주소창에 붙여 넣으세요';
       }
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(url).then(done, legacy);

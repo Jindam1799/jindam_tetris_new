@@ -132,103 +132,141 @@ const Sound = (() => {
     noise(0.35, { vol: vol * 0.3, freq: 900, to: 200, delay });
   }
 
+  // 실로폰(마림바) 소리: 맑은 기본음 + 짧게 사라지는 높은 배음
+  function mari(f, dur = 0.35, vol = 0.2, delay = 0) {
+    tone(f, dur, { vol, delay, attack: 0.003 });
+    tone(f * 4, dur * 0.22, { vol: vol * 0.28, delay, attack: 0.002 });
+    tone(f * 2, dur * 0.5, { type: 'triangle', vol: vol * 0.12, delay });
+  }
+  // 글로켄슈필(반짝 종): 높고 길게 울림
+  function glock(f, dur = 0.6, vol = 0.14, delay = 0) {
+    tone(f, dur, { vol, delay, attack: 0.002 });
+    tone(f * 2.76, dur * 0.4, { vol: vol * 0.3, delay });
+  }
+  // 뽁! 거품 터지는 소리
+  function pop(f = 600, vol = 0.22, delay = 0) {
+    tone(f, 0.09, { vol, delay, to: f * 2.4, attack: 0.002 });
+  }
+  // 밝은 장음계 (도레미솔라 + 시)
+  const MAJ = [0, 2, 4, 5, 7, 9, 11];
+  function mj(i, base = 523.25) {
+    const oct = Math.floor(i / 7);
+    const deg = ((i % 7) + 7) % 7;
+    return base * Math.pow(2, oct + MAJ[deg] / 12);
+  }
+
   const sfx = {
-    move: () => tone(880, 0.025, { type: 'square', vol: 0.03 }),
-    rotate: () => tone(600, 0.06, { type: 'triangle', vol: 0.12, to: 950 }),
-    soft: () => tone(240, 0.02, { vol: 0.035 }),
+    move: () => tone(1350, 0.03, { type: 'triangle', vol: 0.07, to: 1100 }),
+    rotate: () => pop(520, 0.18),
+    soft: () => tone(900, 0.02, { type: 'triangle', vol: 0.035 }),
+    // 퐁! 하고 튀어 오르는 소리
     hard: () => {
-      tone(170, 0.18, { vol: 0.55, to: 45 });
-      noise(0.09, { vol: 0.22, freq: 1600, to: 200 });
+      tone(420, 0.16, { vol: 0.42, to: 110 });
+      tone(260, 0.12, { type: 'triangle', vol: 0.18, to: 520, delay: 0.1 });
+      noise(0.05, { vol: 0.1, freq: 2200, to: 600 });
     },
+    // 똑 (나무 블록)
     lock: () => {
-      tone(240, 0.07, { type: 'triangle', vol: 0.2, to: 140 });
-      noise(0.035, { vol: 0.1, freq: 3000 });
+      tone(880, 0.06, { type: 'triangle', vol: 0.22, to: 620 });
+      tone(1760, 0.03, { vol: 0.06 });
     },
-    hold: () => {
-      tone(500, 0.07, { vol: 0.14, to: 900 });
-      tone(900, 0.08, { vol: 0.1, to: 600, delay: 0.06 });
-    },
-    // 줄 삭제: 쨍(유리 깨짐) + 펀치 + 줄 수만큼 올라가는 종소리 (콤보마다 음이 높아짐)
+    hold: () => pop(700, 0.15),
+    // 줄 삭제: 뽀글뽀글 + 실로폰 올라가는 소리 (콤보마다 한 칸씩 높아짐)
     clear: (lines, combo) => {
-      const b = Math.min(Math.max(combo, 0), 9);
-      noise(0.32, { vol: 0.32, freq: 7500, to: 900, type: 'bandpass', q: 1.1 });
-      noise(0.12, { vol: 0.12, freq: 9000, type: 'highpass' });
-      tone(170, 0.2, { vol: 0.42, to: 55 });
-      for (let i = 0; i <= lines; i++) bell(pn(b + i * 2), 0.45, 0.22, 0.03 + i * 0.065);
-      for (let k = 0; k < 3; k++) tone(pn(b + 8 + k) * 2, 0.12, { type: 'triangle', vol: 0.06, delay: 0.14 + k * 0.05 });
+      const b = Math.min(Math.max(combo, 0), 7);
+      for (let i = 0; i < 3; i++) pop(700 + i * 260, 0.13, i * 0.045);
+      for (let i = 0; i <= lines + 1; i++) mari(mj(b + i * 2), 0.4, 0.22, 0.04 + i * 0.07);
+      glock(mj(b + 9), 0.5, 0.1, 0.12 + lines * 0.07);
     },
-    // 줄이 사라진 뒤 위 블록들이 내려앉는 '쿵'
+    // 줄이 사라진 뒤 블록이 '쿵' 내려앉는 소리 (귀엽게 짧게)
     collapse: (lines) => {
-      tone(120, 0.22, { vol: 0.3 + Math.min(lines, 4) * 0.04, to: 45 });
-      noise(0.12, { vol: 0.14, freq: 700, to: 150 });
+      tone(300, 0.14, { vol: 0.24 + Math.min(lines, 4) * 0.03, to: 140 });
     },
+    // 4줄! 팡파레
     tetris: (combo) => {
-      const b = Math.min(Math.max(combo, 0), 5);
-      for (let i = 0; i < 8; i++) bell(pn(b + i), 0.4, 0.13, i * 0.045);
-      bell(pn(b + 5), 1.1, 0.12, 0.4);
-      bell(pn(b + 7), 1.1, 0.1, 0.4);
-      gong(0.36, 0.35);
-      noise(0.6, { vol: 0.08, freq: 6000, type: 'highpass', delay: 0.36 });
+      const b = Math.min(Math.max(combo, 0), 4);
+      [0, 2, 4, 7, 9, 11, 14].forEach((n, i) => mari(mj(b + n), 0.45, 0.2, i * 0.055));
+      [14, 16, 18].forEach((n) => glock(mj(b + n), 1.1, 0.1, 0.42));
+      for (let i = 0; i < 6; i++) glock(mj(b + 14 + i * 2), 0.3, 0.05, 0.5 + i * 0.05);
     },
     allClear: () => {
-      for (let i = 0; i < 12; i++) bell(pn(i), 0.3, 0.12, i * 0.04);
-      gong(0.5, 0.4);
+      for (let i = 0; i < 12; i++) mari(mj(i), 0.3, 0.17, i * 0.045);
+      [14, 16, 18, 21].forEach((n) => glock(mj(n), 1.2, 0.09, 0.6));
     },
+    // 띵동 (문제 나올 때)
     quiz: () => {
-      bell(784, 0.3, 0.14);
-      bell(1046.5, 0.45, 0.14, 0.1);
+      glock(mj(11), 0.5, 0.16);
+      glock(mj(7), 0.7, 0.16, 0.22);
     },
+    // 딩동댕! (정답)
     correct: () => {
-      bell(1318.5, 0.25, 0.16);
-      bell(1568, 0.5, 0.18, 0.09);
+      glock(mj(7), 0.35, 0.17);
+      glock(mj(9), 0.35, 0.17, 0.14);
+      glock(mj(11), 0.7, 0.19, 0.28);
     },
+    // 뿌우~ (오답, 만화 같은 내려가는 소리)
     wrong: () => {
-      tone(185, 0.34, { type: 'sawtooth', vol: 0.11, to: 90 });
-      tone(176, 0.34, { type: 'square', vol: 0.05, to: 85 });
+      tone(392, 0.22, { type: 'square', vol: 0.06, to: 370 });
+      tone(330, 0.4, { type: 'square', vol: 0.06, to: 250, delay: 0.2 });
+      tone(196, 0.55, { type: 'triangle', vol: 0.16, to: 150, delay: 0.2 });
     },
-    tick: () => tone(1250, 0.03, { type: 'square', vol: 0.05 }),
+    tick: () => tone(1500, 0.03, { type: 'triangle', vol: 0.09 }),
+    // 반짝반짝 마법 소리
     item: () => {
-      tone(300, 0.35, { type: 'square', vol: 0.06, to: 1600 });
-      for (let i = 0; i < 5; i++) bell(pn(5 + i * 2), 0.22, 0.1, 0.25 + i * 0.05);
+      tone(500, 0.4, { vol: 0.08, to: 2000 });
+      for (let i = 0; i < 6; i++) glock(mj(7 + i * 2), 0.3, 0.08, 0.15 + i * 0.05);
     },
+    // 펑! (귀여운 폭발)
     bomb: () => {
-      noise(0.9, { vol: 0.7, freq: 4000, to: 80 });
-      tone(100, 0.6, { vol: 0.6, to: 28 });
+      noise(0.45, { vol: 0.45, freq: 2500, to: 150 });
+      tone(180, 0.35, { vol: 0.4, to: 50 });
+      for (let i = 0; i < 4; i++) pop(500 + i * 300, 0.1, 0.12 + i * 0.05);
     },
+    // 슝~ 미끄럼 휘슬
     gravity: () => {
-      tone(900, 0.5, { type: 'triangle', vol: 0.14, to: 80 });
-      noise(0.45, { vol: 0.22, freq: 900, to: 150, delay: 0.3 });
+      tone(1400, 0.55, { vol: 0.13, to: 220 });
+      tone(300, 0.18, { type: 'triangle', vol: 0.2, to: 120, delay: 0.5 });
     },
+    // 지잉! 번개
     zap: () => {
-      noise(0.4, { vol: 0.45, freq: 6000, to: 500, type: 'bandpass', q: 2 });
-      tone(1800, 0.3, { type: 'sawtooth', vol: 0.07, to: 200 });
+      tone(1800, 0.25, { type: 'square', vol: 0.05, to: 300 });
+      noise(0.25, { vol: 0.22, freq: 5000, to: 800, type: 'bandpass', q: 2 });
+      glock(mj(14), 0.4, 0.08, 0.15);
     },
+    // 꽁! (방해 줄)
     penalty: () => {
-      tone(90, 0.4, { type: 'sawtooth', vol: 0.17, to: 55 });
-      noise(0.35, { vol: 0.2, freq: 700, to: 120 });
+      tone(220, 0.18, { type: 'square', vol: 0.07, to: 160 });
+      tone(140, 0.3, { vol: 0.25, to: 80 });
     },
+    // 어-오! (경고)
     warn: () => {
-      [0, 0.15, 0.3].forEach((d, i) => tone(i % 2 ? 660 : 880, 0.12, { type: 'square', vol: 0.07, delay: d }));
+      tone(660, 0.16, { type: 'triangle', vol: 0.18, to: 620 });
+      tone(500, 0.24, { type: 'triangle', vol: 0.18, to: 440, delay: 0.18 });
     },
+    // 흔들흔들 지진
     quake: () => {
-      noise(1.0, { vol: 0.45, freq: 300, to: 60 });
-      tone(55, 0.9, { type: 'sawtooth', vol: 0.14, to: 35 });
+      for (let i = 0; i < 6; i++) tone(i % 2 ? 160 : 120, 0.12, { type: 'triangle', vol: 0.18, delay: i * 0.1 });
+      noise(0.7, { vol: 0.15, freq: 400, to: 120 });
     },
-    sand: () => noise(0.05, { vol: 0.06, freq: 1200 }),
+    sand: () => tone(1900, 0.025, { type: 'triangle', vol: 0.05 }),
+    // 레벨 업 팡파레
     levelUp: () => {
-      [0, 1, 2, 3, 4, 5, 7].forEach((n, i) => bell(pn(n), 0.35, 0.14, i * 0.08));
-      gong(0.55, 0.35);
+      [0, 2, 4, 7].forEach((n, i) => mari(mj(n), 0.3, 0.2, i * 0.11));
+      [7, 9, 11].forEach((n) => glock(mj(n), 1.1, 0.12, 0.5));
     },
+    // 와와와~ 아쉬운 소리
     over: () => {
-      [7, 5, 3, 1, 0].forEach((n, i) => tone(pn(n) / 2, 0.38, { type: 'triangle', vol: 0.14, delay: i * 0.17 }));
-      gong(0.9, 0.3);
+      [0, -1, -2].forEach((n, i) => tone(mj(n + 4, 261.6), 0.32, { type: 'sawtooth', vol: 0.05, delay: i * 0.33 }));
+      tone(mj(1, 261.6), 0.9, { type: 'sawtooth', vol: 0.05, to: mj(0, 220), delay: 1.0 });
+      [0, -1, -2].forEach((n, i) => tone(mj(n + 4, 261.6), 0.32, { vol: 0.14, delay: i * 0.33 }));
+      tone(mj(1, 261.6), 0.9, { vol: 0.14, to: mj(0, 220), delay: 1.0 });
     },
-    count: (go) => (go ? (bell(1046.5, 0.6, 0.2), bell(1568, 0.6, 0.12, 0.05)) : tone(523, 0.12, { type: 'square', vol: 0.07 })),
+    count: (go) => (go ? (mari(mj(7), 0.5, 0.22), glock(mj(11), 0.7, 0.14, 0.05)) : pop(800, 0.16)),
     fever: () => {
-      tone(200, 0.6, { type: 'sawtooth', vol: 0.07, to: 1200 });
-      [0, 2, 4, 7, 9, 10].forEach((n, i) => bell(pn(n + 3), 0.3, 0.12, 0.3 + i * 0.05));
+      for (let i = 0; i < 8; i++) mari(mj(4 + i), 0.25, 0.14, i * 0.05);
+      glock(mj(14), 0.8, 0.12, 0.42);
     },
-    ui: () => tone(700, 0.04, { vol: 0.08 }),
+    ui: () => pop(900, 0.12),
   };
   return { init, ensure, setVolume, sfx, ctx: () => ctx };
 })();
@@ -417,12 +455,20 @@ const BS = 40;
 const LINES_PER_LEVEL = 20; // 레벨당 지울 줄 (예전 30 → 템포 개선)
 
 // 1~7 기본, 8 낙석(모래), 9 방해벽돌, 10 폭탄, 11 중력, 12~16 헬 특수블록, 17 번개
+// 사탕 같은 밝은 블록 색 (1~7 기본, 8 떨어지는 돌, 9 방해 블록, 10 폭탄, 11 내려앉기, 12~16 헬 특수, 17 번개)
 const COLORS = [
-  null, '#2fe6ff', '#3d7bff', '#ff9a2e', '#ffd93b', '#34e07a', '#b65cff', '#ff4560',
-  '#a88d68', '#5b5672', '#ff4560', '#b65cff', '#1de9b6', '#ff7ad9', '#9d8cff', '#ffe08a', '#ff9f80', '#ffd93b',
+  null, '#4fc3f7', '#5b7cfa', '#ff9f43', '#ffd23f', '#3ddc97', '#b388ff', '#ff6b81',
+  '#e8c07d', '#c9c3e3', '#ff6b6b', '#9b7bff', '#2ed3c6', '#ff8fd8', '#8c9eff', '#ffe08a', '#ffb199', '#ffd23f',
 ];
-const ITEM_ICON = { 10: '💣', 11: '⏬', 17: '⚡' };
-const ITEM_NAME = { 10: '💣 火烧连营!', 11: '⏬ 泰山压顶!', 17: '⚡ 一扫而光!' };
+const INK = '#2b2a4c';
+const ITEM_NAME = { 10: '火烧连营!', 11: '泰山压顶!', 17: '一扫而光!' };
+// 아이템 블록 그림 (SVG 경로를 캔버스에 그대로 그림)
+const ITEM_PATH = {
+  10: ['M12 9.2a5.6 5.6 0 1 0 0.01 0z', 'M14.6 8.6l2.4-2.4', 'M18.6 3.6v2M20.6 5.6h-2'],
+  11: ['M6.5 5L12 10.5 17.5 5M6.5 12.4L12 17.9l5.5-5.5'],
+  17: ['M13.4 2.8L5.8 13.4h5.4L10.2 21.2l8-11.3h-5.5z'],
+};
+const icon = (name, cls = '') => `<svg class="ic ${cls}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
 const isItem = (v) => v === 10 || v === 11 || v === 17;
 
 const SHAPES = {
@@ -497,42 +543,81 @@ function sprite(v, size) {
   cv.width = cv.height = size;
   const c = cv.getContext('2d');
   const col = COLORS[v];
-  const pad = Math.max(1, size * 0.04);
-  const r = size * 0.18;
+  const lw = Math.max(1.5, size * 0.075); // 굵은 남색 테두리 (스티커 느낌)
+  const pad = lw / 2 + size * 0.03;
+  const r = size * 0.22;
   const grad = c.createLinearGradient(0, 0, 0, size);
-  grad.addColorStop(0, shade(col, 0.38));
-  grad.addColorStop(0.5, col);
-  grad.addColorStop(1, shade(col, -0.38));
+  grad.addColorStop(0, shade(col, 0.22));
+  grad.addColorStop(1, shade(col, -0.08));
   rrect(c, pad, pad, size - pad * 2, size - pad * 2, r);
   c.fillStyle = grad;
   c.fill();
-  c.lineWidth = Math.max(1, size * 0.05);
-  c.strokeStyle = shade(col, -0.5);
+  // 아래쪽 그림자 띠
+  c.save();
+  c.clip();
+  c.fillStyle = shade(col, -0.22);
+  c.fillRect(0, size * 0.74, size, size);
+  c.restore();
+  rrect(c, pad, pad, size - pad * 2, size - pad * 2, r);
+  c.lineWidth = lw;
+  c.strokeStyle = INK;
   c.stroke();
-  rrect(c, size * 0.17, size * 0.14, size * 0.66, size * 0.24, r * 0.6);
-  c.fillStyle = 'rgba(255,255,255,0.3)';
+  // 반짝이 (왼쪽 위)
+  c.fillStyle = 'rgba(255,255,255,0.75)';
+  rrect(c, size * 0.22, size * 0.2, size * 0.3, size * 0.13, size * 0.065);
+  c.fill();
+  c.beginPath();
+  c.arc(size * 0.64, size * 0.265, size * 0.055, 0, Math.PI * 2);
   c.fill();
   if (v === 9) {
-    c.strokeStyle = 'rgba(0,0,0,0.35)';
-    c.lineWidth = Math.max(1, size * 0.04);
-    c.beginPath();
-    c.moveTo(pad * 2, size / 2);
-    c.lineTo(size - pad * 2, size / 2);
-    c.moveTo(size / 2, size / 2);
-    c.lineTo(size / 2, size - pad * 2);
-    c.moveTo(size * 0.3, pad * 2);
-    c.lineTo(size * 0.3, size / 2);
-    c.stroke();
+    // 방해 블록: 작은 점무늬
+    c.fillStyle = 'rgba(43,42,76,0.22)';
+    [[0.35, 0.55], [0.62, 0.48], [0.5, 0.66], [0.7, 0.66]].forEach(([a, b]) => {
+      c.beginPath();
+      c.arc(size * a, size * b, size * 0.045, 0, Math.PI * 2);
+      c.fill();
+    });
   }
   if (v === 8) {
-    c.fillStyle = 'rgba(60,40,20,0.45)';
-    for (let i = 0; i < 7; i++) c.fillRect(size * (0.2 + ((i * 37) % 60) / 100), size * (0.45 + ((i * 23) % 40) / 100), size * 0.07, size * 0.07);
+    c.fillStyle = 'rgba(120,80,30,0.35)';
+    [[0.3, 0.55], [0.55, 0.5], [0.68, 0.64], [0.42, 0.68]].forEach(([a, b]) => {
+      c.beginPath();
+      c.arc(size * a, size * b, size * 0.05, 0, Math.PI * 2);
+      c.fill();
+    });
   }
-  if (ITEM_ICON[v]) {
-    c.font = `${Math.round(size * 0.6)}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif`;
-    c.textAlign = 'center';
-    c.textBaseline = 'middle';
-    c.fillText(ITEM_ICON[v], size / 2, size / 2 + size * 0.05);
+  if (ITEM_PATH[v]) {
+    // 하얀 동그라미 위에 아이템 그림
+    c.fillStyle = '#fff';
+    c.beginPath();
+    c.arc(size / 2, size / 2, size * 0.3, 0, Math.PI * 2);
+    c.fill();
+    c.lineWidth = lw * 0.7;
+    c.strokeStyle = INK;
+    c.stroke();
+    c.save();
+    const s = (size * 0.46) / 24;
+    c.translate(size / 2 - 12 * s, size / 2 - 12 * s);
+    c.scale(s, s);
+    c.lineCap = 'round';
+    c.lineJoin = 'round';
+    ITEM_PATH[v].forEach((d, i) => {
+      const path = new Path2D(d);
+      if (v === 11 || (v === 10 && i > 0)) {
+        c.lineWidth = v === 11 ? 3.2 : 2.4;
+        c.strokeStyle = v === 10 && i === 2 ? '#ffb800' : INK;
+        c.stroke(path);
+      } else {
+        c.fillStyle = v === 17 ? '#ffb800' : INK;
+        c.fill(path);
+        if (v === 17) {
+          c.lineWidth = 1.6;
+          c.strokeStyle = INK;
+          c.stroke(path);
+        }
+      }
+    });
+    c.restore();
   }
   spriteCache[key] = cv;
   return cv;
@@ -546,7 +631,7 @@ const MODE_CFG = {
 };
 const CLEAR_MS = 320;
 const SOFT_MS = 40; // 키보드 ↓ 소프트드롭 속도
-// 모바일 ▼ 버튼: 탭 = 한 칸, 꾹 누르면 잠깐 뒤 연속 하강 (속도는 설정에서 1~10단계)
+// 모바일 아래 버튼: 탭 = 한 칸, 꾹 누르면 잠깐 뒤 연속 하강 (속도는 설정에서 1~10단계)
 const TOUCH_SOFT_DELAY = 170;
 const touchSoftMs = () => Math.round(190 - (settings.soft || 5) * 15); // 1단계 175ms … 5단계 115ms … 10단계 40ms
 const DAS = 150;
@@ -893,7 +978,7 @@ function scoreLines(rows, passive) {
   if (isFever()) pts *= 2;
   addScore(pts);
   const cy = rows.reduce((a, b) => a + b, 0) / n;
-  G.popups.push({ text: '+' + pts.toLocaleString(), x: 200, y: cy * BS + 20, life: 900, max: 900, color: isFever() ? '#ffc94a' : '#fff' });
+  G.popups.push({ text: '+' + pts.toLocaleString(), x: 200, y: cy * BS + 20, life: 900, max: 900, color: isFever() ? '#ffb800' : '#3ba8f5' });
 
   G.lines += n;
 
@@ -903,14 +988,14 @@ function scoreLines(rows, passive) {
     S.tetris(G.combo);
     boardFx('shake-l');
     flash();
-    showAction('痛快!', tag + comboTxt, '#ff4d5e');
+    showAction('痛快!', tag + comboTxt, '#ff6b6b');
     setTimeout(() => TTS.speak('痛快！', 1), 120);
   } else {
     S.clear(n, passive ? 0 : G.combo);
     boardFx(n >= 2 ? 'shake-m' : 'shake-s');
-    if (n === 3) showAction('三消!', comboTxt, '#b65cff');
-    else if (n === 2) showAction('双消!', comboTxt, '#2fe6ff');
-    else if (comboTxt) showAction(comboTxt, '', '#ff9a2e');
+    if (n === 3) showAction('三消!', comboTxt, '#9b7bff');
+    else if (n === 2) showAction('双消!', comboTxt, '#3ba8f5');
+    else if (comboTxt) showAction(comboTxt, '', '#ff9f43');
   }
   updateHUD();
 }
@@ -1035,7 +1120,7 @@ function grantItem() {
   G.queue.unshift(newPiece(t));
   S.item();
   const run = G.runId;
-  setTimeout(() => run === G.runId && showNotice('🎁 아이템 획득!', '#ffc94a'), 600);
+  setTimeout(() => run === G.runId && showNotice('아이템 획득!', '#ffb800'), 600);
   drawPreviews();
 }
 function addPenaltyLine() {
@@ -1055,7 +1140,7 @@ function spawnSky() {
   }
   if (G.sky.length) {
     S.warn();
-    showNotice('⚠️ 乱石穿空!', '#ff9a2e');
+    showNotice('乱石穿空!\n돌이 떨어져요', '#ff9f43');
   }
 }
 function updateSky(dt) {
@@ -1096,11 +1181,11 @@ function randomEvent() {
     G.reversedUntil = G.clock + 6000;
     S.warn();
     boardFx('shake-m');
-    showNotice('⚠️ 声东击西!\n좌우 반전', '#ff4d5e');
+    showNotice('声东击西!\n좌우가 바뀌어요', '#ff6b6b');
   } else {
     S.quake();
     boardFx('shake-l');
-    showNotice('⚠️ 天崩地裂!', '#d06bff');
+    showNotice('天崩地裂!\n지진이에요', '#9b7bff');
     const start = ROWS - 4;
     let count = 0;
     for (let y = start; y < ROWS; y++)
@@ -1122,7 +1207,7 @@ function startFever() {
   G.feverUntil = G.clock + FEVER_MS;
   S.fever();
   const run = G.runId;
-  setTimeout(() => run === G.runId && showNotice('🔥 FEVER ×2', '#ffc94a'), 900);
+  setTimeout(() => run === G.runId && showNotice('점수 2배!', '#ffb800'), 900);
 }
 function generateObstacles() {
   const h = G.diff.garbage;
@@ -1134,10 +1219,10 @@ function generateObstacles() {
 
 /* ---------------- 7. 퀴즈 ---------------- */
 const QUIZ_TYPES = {
-  pair: '🧩 짝꿍어휘',
+  pair: '짝꿍어휘',
   kr2cn: '한 → 중',
   cn2kr: '중 → 한',
-  listen: '🎧 듣기',
+  listen: '듣기',
 };
 function startQuiz() {
   G.state = 'QUIZ';
@@ -1196,7 +1281,7 @@ function startQuiz() {
     word.className = 'cn';
     sub.textContent = q.py;
   } else {
-    word.textContent = '🔊';
+    word.innerHTML = icon('sound');
     word.className = 'listen';
     sub.textContent = '잘 듣고 뜻을 고르세요';
   }
@@ -1255,7 +1340,7 @@ function answerQuiz(i) {
   const btns = document.querySelectorAll('#quiz-options .opt');
   btns.forEach((b, k) => b.classList.add(k === z.correct ? 'correct' : k === i ? 'wrong' : 'dim'));
   if (z.type === 'pair') {
-    $('quiz-sub').textContent = `${z.pr.cn} · ${z.pr.py}`;
+    $('quiz-sub').textContent = `${z.pr.cn} (${z.pr.py})`;
   }
   if (z.type === 'listen') {
     $('quiz-word').textContent = z.q.cn;
@@ -1276,7 +1361,7 @@ function answerQuiz(i) {
     let pts = Math.round((50 + 150 * frac) * G.level);
     if (isFever()) pts *= 2;
     addScore(pts);
-    showNotice('答对! +' + pts, '#2de0a7');
+    showNotice('答对! +' + pts, '#22c384');
     G.gauge++;
     if (G.streak % 3 === 0) startFever();
     if (G.gauge >= 5) {
@@ -1290,7 +1375,7 @@ function answerQuiz(i) {
     if (!practice) G.gauge = 0;
     G.missed.set(z.q.cn, z.q);
     G.qQueue.splice(Math.min(2, G.qQueue.length), 0, z.q);
-    showNotice(i < 0 ? '超时!' : '答错!', '#ff4d5e');
+    showNotice(i < 0 ? '超时!' : '答错!', '#ff6b6b');
   }
   setTimeout(() => TTS.speak(z.say), 200);
   updateHUD();
@@ -1324,7 +1409,7 @@ function render(now) {
   ctx.setTransform(cv._k || 1, 0, 0, cv._k || 1, 0, 0);
   ctx.clearRect(0, 0, 400, 800);
   // 격자
-  ctx.strokeStyle = G.mode === 'HELL' ? 'rgba(255,80,60,0.07)' : 'rgba(255,255,255,0.045)';
+  ctx.strokeStyle = G.mode === 'HELL' ? 'rgba(255,107,107,0.12)' : 'rgba(59,168,245,0.12)';
   ctx.lineWidth = 1;
   ctx.beginPath();
   for (let x = 1; x < COLS; x++) {
@@ -1349,15 +1434,22 @@ function render(now) {
       maxX = Math.max(maxX, x);
     });
     const g = ctx.createLinearGradient(0, 0, 0, ROWS * BS);
-    g.addColorStop(0, 'rgba(255,255,255,0)');
-    g.addColorStop(1, 'rgba(255,255,255,0.06)');
+    g.addColorStop(0, 'rgba(59,168,245,0)');
+    g.addColorStop(1, 'rgba(59,168,245,0.09)');
     ctx.fillStyle = g;
     ctx.fillRect(minX * BS, 0, (maxX - minX + 1) * BS, ROWS * BS);
   }
 
   // 위험 구역 표시
-  ctx.fillStyle = 'rgba(255,60,60,0.06)';
+  ctx.fillStyle = 'rgba(255,107,107,0.08)';
   ctx.fillRect(0, 0, COLS * BS, 2 * BS);
+  ctx.strokeStyle = 'rgba(255,107,107,0.35)';
+  ctx.setLineDash([8, 8]);
+  ctx.beginPath();
+  ctx.moveTo(0, 2 * BS);
+  ctx.lineTo(COLS * BS, 2 * BS);
+  ctx.stroke();
+  ctx.setLineDash([]);
 
   // 쌓인 블록
   const clearRows = G.clearing ? G.clearing.rows : null;
@@ -1374,7 +1466,7 @@ function render(now) {
       else drawCell(ctx, v, x * BS, y * BS, BS, isItem(v) ? pulse : 1);
     }
     if (isClr) {
-      ctx.fillStyle = `rgba(255,255,255,${0.95 * (1 - k)})`;
+      ctx.fillStyle = `rgba(255,224,90,${0.95 * (1 - k)})`;
       const w = COLS * BS * (1 - k);
       ctx.fillRect((COLS * BS - w) / 2, y * BS + BS * 0.1 * k, w, BS * (1 - 0.2 * k));
     }
@@ -1394,10 +1486,11 @@ function render(now) {
           if (!v) return;
           const x = (p.x + c) * BS, y = (gy + r) * BS;
           if (y < 0) return;
-          ctx.globalAlpha = 0.14;
-          rrect(ctx, x + 3, y + 3, BS - 6, BS - 6, 7);
+          ctx.globalAlpha = 0.18;
+          rrect(ctx, x + 4, y + 4, BS - 8, BS - 8, 9);
           ctx.fill();
-          ctx.globalAlpha = 0.55;
+          ctx.globalAlpha = 0.7;
+          ctx.setLineDash([6, 5]);
           ctx.stroke();
         }),
       );
@@ -1439,21 +1532,25 @@ function renderFx() {
   });
   fx.globalAlpha = 1;
   fx.textAlign = 'center';
-  fx.font = '700 28px "Chakra Petch", Consolas, monospace';
+  fx.font = '34px Jua, "Apple SD Gothic Neo", sans-serif';
+  fx.lineJoin = 'round';
   G.popups.forEach((q) => {
     const a = q.life / q.max;
     fx.globalAlpha = Math.min(1, a * 2);
-    fx.lineWidth = 4;
-    fx.strokeStyle = 'rgba(0,0,0,0.7)';
     const y = q.y - (1 - a) * 50;
+    fx.lineWidth = 9;
+    fx.strokeStyle = '#fff';
+    fx.strokeText(q.text, q.x, y);
+    fx.lineWidth = 2.5;
+    fx.strokeStyle = INK;
     fx.strokeText(q.text, q.x, y);
     fx.fillStyle = q.color;
     fx.fillText(q.text, q.x, y);
   });
   fx.globalAlpha = 1;
   if (G.flash > 0) {
-    fx.fillStyle = G.flashColor || '#fff';
-    fx.globalAlpha = G.flash * 0.45;
+    fx.fillStyle = G.flashColor || '#fff3b0';
+    fx.globalAlpha = G.flash * 0.5;
     fx.fillRect(0, 0, 400, 800);
     fx.globalAlpha = 1;
   }
@@ -1488,7 +1585,7 @@ function burst(x, y, v, n) {
 }
 function flash(color) {
   G.flash = 1;
-  G.flashColor = color || '#fff';
+  G.flashColor = color || '#fff3b0';
 }
 function boardFx(cls) {
   boardWrap.classList.remove('shake-s', 'shake-m', 'shake-l', 'thump');
@@ -1541,15 +1638,15 @@ function updateHUD() {
   $('streak-card').classList.toggle('fever', fever);
   boardWrap.classList.toggle('fever', fever);
   $('fever-fill').style.width = (fever ? ((G.feverUntil - G.clock) / FEVER_MS) * 100 : ((G.streak % 3) / 3) * 100) + '%';
-  $('fever-hint').textContent = fever ? `FEVER! ${Math.ceil((G.feverUntil - G.clock) / 1000)}초 남음` : '3연속 정답 → FEVER ×2';
+  $('fever-hint').textContent = fever ? `점수 2배! ${Math.ceil((G.feverUntil - G.clock) / 1000)}초 남았어요` : '3개 연속 맞히면 점수 2배';
   let danger = false;
   for (let y = 0; y < 4 && !danger; y++) danger = G.board[y].some((v) => v);
   boardWrap.classList.toggle('danger', danger && G.state !== 'GAME_OVER' && !fever);
   // 상태 칩
   const chips = [];
-  if (G.reversedUntil > G.clock) chips.push(`<span class="chip" style="color:#ff4d5e">⇄ 좌우반전 ${Math.ceil((G.reversedUntil - G.clock) / 1000)}</span>`);
-  if (fever) chips.push(`<span class="chip" style="color:#ffc94a">🔥 FEVER ×2</span>`);
-  if (G.section) chips.push(`<span class="chip" style="color:${G.mode === 'HELL' ? '#ff9a2e' : '#2de0a7'}">📘 STAGE ${G.section} · ${sectionWords(G.section).length - G.qQueue.length}/${sectionWords(G.section).length}</span>`);
+  if (G.reversedUntil > G.clock) chips.push(`<span class="chip" style="color:#e5484d">좌우 반전 ${Math.ceil((G.reversedUntil - G.clock) / 1000)}</span>`);
+  if (fever) chips.push(`<span class="chip" style="color:#d99a00">점수 2배</span>`);
+  if (G.section) chips.push(`<span class="chip" style="color:${G.mode === 'HELL' ? '#e5484d' : '#1f8fe0'}">STAGE ${G.section} 단어 ${sectionWords(G.section).length - G.qQueue.length}/${sectionWords(G.section).length}</span>`);
   const html = chips.join('');
   const box = $('status-chips');
   if (box.innerHTML !== html) box.innerHTML = html;
@@ -1608,7 +1705,7 @@ function updatePlaying(dt) {
   }
   if (G.reversedUntil && G.clock > G.reversedUntil) {
     G.reversedUntil = 0;
-    showNotice('✅ 拨云见日!', '#2de0a7');
+    showNotice('拨云见日!\n원래대로', '#22c384');
   }
   updateSky(dt);
   if (G.state !== 'PLAYING' || !G.piece) return;
@@ -1661,7 +1758,7 @@ function loop(now) {
         const bonus = 2000 * G.level;
         addScore(bonus);
         S.allClear();
-        showAction('全清!', '+' + bonus, '#ffc94a');
+        showAction('全清!', '+' + bonus, '#ffb800');
       }
       updateHUD();
       finishTurn();
@@ -1792,7 +1889,7 @@ function hideAll() {
 }
 function setModeLook(mode) {
   document.body.dataset.mode = mode;
-  $('mode-badge').textContent = mode === 'LOBBY' ? 'LOBBY' : `${MODE_CFG[mode].label.split(' ')[0]} STAGE ${G.section}`;
+  $('mode-badge').textContent = mode === 'LOBBY' ? '모드 고르기' : `${MODE_CFG[mode].label.split(' ')[0]} STAGE ${G.section}`;
 }
 
 function closeIntro() {
@@ -1889,9 +1986,9 @@ function showLevelClear() {
   $('level-quiz').textContent = `${G.lvQuizRight}/${G.lvQuizTotal}`;
   $('clear-big').textContent = last ? '全部通关!' : '过关!';
   $('unlock-msg').textContent = last
-    ? `🏆 ${G.mode === 'HELL' ? '헬' : '노멀'} 모드 모든 스테이지 클리어!`
-    : `${newly ? '🔓 새로 열림' : '▶ 다음'} · STAGE ${G.level + 1} (${pad4(sectionWords(G.level + 1)[0].no)}–${pad4(sectionWords(G.level + 1).slice(-1)[0].no)})`;
-  $('next-level-btn').innerHTML = last ? '🏆 기록 남기기' : `STAGE ${G.level + 1} 시작 <kbd>Enter</kbd>`;
+    ? `${G.mode === 'HELL' ? '헬' : '노멀'} 모드 모든 스테이지를 클리어했어요!`
+      : `${newly ? '새 스테이지가 열렸어요! STAGE ' + (G.level + 1) : '다음은 STAGE ' + (G.level + 1)} (단어 ${pad4(sectionWords(G.level + 1)[0].no)}–${pad4(sectionWords(G.level + 1).slice(-1)[0].no)})`;
+  $('next-level-btn').innerHTML = last ? `${icon('trophy')}기록 남기기` : `${icon('play')}STAGE ${G.level + 1} 시작 <kbd>Enter</kbd>`;
   const run = G.runId;
   setTimeout(() => run === G.runId && showOverlay('level-clear-ui'), 700);
 }
@@ -1946,8 +2043,8 @@ function gameOver() {
   $('over-title').textContent = G.allClear ? '全部通关' : '游戏结束';
   $('over-title').classList.toggle('red', !G.allClear);
   $('over-sub').textContent =
-    `STAGE ${G.startStage}에서 시작 → STAGE ${G.level} 도달 · ${G.stagesCleared}개 클리어` +
-    (G.allClear ? '' : ` · 이어하기: STAGE ${continueStage(G.mode)}`);
+    `STAGE ${G.startStage}에서 시작해서 STAGE ${G.level}까지 왔어요. 이번 판에 ${G.stagesCleared}개 클리어!` +
+    (G.allClear ? '' : ` 다음엔 STAGE ${continueStage(G.mode)}부터 이어서 할 수 있어요.`);
   $('final-score').textContent = G.score.toLocaleString();
   $('final-level').textContent = G.level;
   $('final-lines').textContent = G.lines;
@@ -1957,7 +2054,7 @@ function gameOver() {
   if (!G.missed.size) {
     const li = document.createElement('li');
     li.className = 'empty';
-    li.textContent = G.quizTotal ? '틀린 단어가 없어요! 完美 👏' : '이번 판에는 퀴즈가 없었어요.';
+    li.textContent = G.quizTotal ? '틀린 단어가 하나도 없어요! 完美!' : '이번 판에는 퀴즈가 없었어요.';
     list.appendChild(li);
   }
   G.missed.forEach((q) => {
@@ -1966,7 +2063,8 @@ function gameOver() {
     const left = document.createElement('div');
     const cn = document.createElement('div');
     cn.className = 'rv-cn';
-    cn.textContent = '🔊 ' + q.cn;
+    cn.innerHTML = icon('sound');
+    cn.append(q.cn);
     const py = document.createElement('div');
     py.className = 'rv-py';
     py.textContent = q.py;
@@ -2004,8 +2102,8 @@ function openSections(mode = 'NORMAL') {
   grid.dataset.mode = mode;
   const total = secCount(mode);
   const cur = continueStage(mode);
-  $('section-title').textContent = (mode === 'HELL' ? '🔥 헬 모드' : '노멀 모드') + ' 스테이지';
-  $('section-summary').textContent = `스테이지마다 ${secSize(mode)}단어 · 클리어 ${Math.min(progress[mode].unlocked - 1, total)}/${total}`;
+  $('section-title').textContent = (mode === 'HELL' ? '헬 모드' : '노멀 모드') + ' 스테이지';
+  $('section-summary').textContent = `스테이지마다 ${secSize(mode)}단어, 지금까지 ${Math.min(progress[mode].unlocked - 1, total)}개 클리어 (전체 ${total}개)`;
   for (let st = 1; st <= total; st++) {
     const words = sectionWords(st, mode);
     const cleared = isCleared(mode, st);
@@ -2013,7 +2111,7 @@ function openSections(mode = 'NORMAL') {
     const b = document.createElement('button');
     b.className = 'sec-tile' + (cleared ? ' done' : locked ? ' locked' : ' rec');
     b.innerHTML =
-      `<span class="sec-no">${locked ? '🔒' : cleared ? '★' : st}</span>` +
+      `<span class="sec-no">${locked ? icon('lock') : cleared ? icon('star') : st}</span>` +
       `<span class="sec-range">STAGE ${st}</span>` +
       `<span class="sec-cn"></span><span class="sec-bar"><i></i></span>`;
     b.querySelector('.sec-cn').textContent = locked ? `${pad4(words[0].no)}–${pad4(words[words.length - 1].no)}` : `${words[0].cn} … ${words[words.length - 1].cn}`;
@@ -2023,7 +2121,7 @@ function openSections(mode = 'NORMAL') {
     if (!locked) b.addEventListener('click', () => startGame(mode, st));
     grid.appendChild(b);
   }
-  $('btn-map-continue').innerHTML = `▶ STAGE ${cur} ${cur > 1 ? '이어하기' : '시작'}`;
+  $('btn-map-continue').innerHTML = `${icon('play')}STAGE ${cur} ${cur > 1 ? '이어하기' : '시작'}`;
   setModeLook('LOBBY');
   showOverlay('section-ui');
   const curTile = grid.querySelector(`[data-sec="${cur}"]`);
@@ -2060,14 +2158,15 @@ function renderRankings(mode, highlight = -1) {
     const li = document.createElement('li');
     if (i === highlight) li.className = 'me';
     [
-      ['rk', i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1],
+      ['rk', i + 1],
       ['nm', r.name],
-      ['lv', (r.clear ? '🏆 ' : '') + 'STAGE ' + r.stage],
+      ['lv', 'STAGE ' + r.stage, r.clear],
       ['sc', Number(r.score).toLocaleString()],
-    ].forEach(([cls, txt]) => {
+    ].forEach(([cls, txt, star]) => {
       const s = document.createElement('span');
       s.className = cls;
-      s.textContent = txt;
+      if (star) s.innerHTML = icon('star');
+      s.append(txt);
       li.appendChild(s);
     });
     list.appendChild(li);
@@ -2115,7 +2214,7 @@ function fillVoiceSelect() {
   if (!v) {
     note.textContent = '이 기기에서 중국어 음성을 찾지 못했어요. Chrome(아이폰은 Safari도 OK)에서 열고 인터넷 연결을 확인해 주세요. (듣기 문제는 자동으로 빠져요)';
   } else if (/ting/i.test(v.name)) {
-    note.textContent = `✅ 지금 음성: ${v.name}`;
+    note.textContent = `지금 음성: ${v.name}`;
   } else {
     note.textContent = `지금 음성: ${v.name}\nTingting은 Mac·iPhone에 들어 있는 음성이라, Windows에서는 가장 비슷한 중국어 여성 음성을 자동으로 써요.`;
   }
@@ -2177,7 +2276,7 @@ function toggleMute() {
   Sound.setVolume();
   BGM.refresh();
   if (settings.muted && window.speechSynthesis) speechSynthesis.cancel();
-  $('btn-mute').textContent = settings.muted ? '🔇' : '🔊';
+  $('btn-mute').innerHTML = icon(settings.muted ? 'mute' : 'sound');
 }
 
 /* ---------------- 버튼 연결 ---------------- */
@@ -2195,8 +2294,8 @@ function renderLobby() {
     card.querySelector('.mc-unlocked').textContent = `${cleared} / ${total}`;
     card.querySelector('.mc-bar i').style.width = (cleared / total) * 100 + '%';
     const best = progress[mode].best;
-    card.querySelector('.mc-best').textContent = best ? `최고 기록 · STAGE ${best.stage}${best.clear ? ' 🏆' : ''} · ${Number(best.score).toLocaleString()}점` : '최고 기록 · 아직 없음';
-    card.querySelector('.mc-play').innerHTML = cleared >= total ? `▶ STAGE ${cur} 다시 도전` : `▶ STAGE ${cur} ${cur > 1 ? '이어하기' : '시작'}`;
+    card.querySelector('.mc-best').textContent = best ? `최고 기록: STAGE ${best.stage}${best.clear ? ' 모두 클리어' : ''}, ${Number(best.score).toLocaleString()}점` : '최고 기록 없음';
+    card.querySelector('.mc-play').innerHTML = cleared >= total ? `${icon('play')}STAGE ${cur} 다시 도전` : `${icon('play')}STAGE ${cur} ${cur > 1 ? '이어하기' : '시작'}`;
   });
 }
 document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => hideOverlay(b.dataset.close)));
@@ -2236,7 +2335,7 @@ function buzz(pattern) {
 }
 
 /* 레이아웃: desktop(키보드) / portrait(세로 터치) / landscape(가로 터치) */
-const LAYOUT_SIZE = { desktop: [960, 930], landscape: [1400, 930], portrait: [548, 918] };
+const LAYOUT_SIZE = { desktop: [960, 930], landscape: [1400, 930], portrait: [476, 900] };
 let isTouch =
   (window.matchMedia && matchMedia('(pointer: coarse)').matches) ||
   (navigator.maxTouchPoints > 0 && window.matchMedia && matchMedia('(hover: none)').matches);
@@ -2287,6 +2386,10 @@ function fit() {
   stage.style.left = probe.left + W / 2 + 'px';
   stage.style.top = probe.top + banner + H / 2 + 'px';
 
+  // 휴대폰 세로: '다음 블록'을 왼쪽 열 맨 위로 옮김 (오른쪽 패널은 숨김)
+  const nextCard = document.querySelector('.next-card');
+  const home = layout === 'portrait' ? $('left-panel') : $('right-panel');
+  if (nextCard && nextCard.parentElement !== home) home.prepend(nextCard);
   sizeCanvas(cv, 400, 800);
   sizeCanvas($('fx'), 400, 800);
   sizeCanvas($('next-canvas'), 160, 330);
@@ -2492,7 +2595,7 @@ window.addEventListener('orientationchange', () => setTimeout(fit, 250));
 
 // PC에서 Chrome이 아닐 때만 안내 (휴대폰·태블릿은 기본 브라우저로도 잘 동작)
 if (!isChrome() && !isTouch) {
-  if (/^https?:$/.test(location.protocol)) $('banner-text').textContent = '🔔 Chrome으로 열면 효과음과 중국어 음성이 가장 잘 나와요.';
+  if (/^https?:$/.test(location.protocol)) $('banner-text').textContent = 'Chrome으로 열면 효과음과 중국어 음성이 가장 잘 나와요.';
   $('browser-banner').classList.remove('hidden');
 }
 $('banner-close').addEventListener('click', () => {
@@ -2501,5 +2604,5 @@ $('banner-close').addEventListener('click', () => {
 });
 window.addEventListener('resize', fit);
 fit();
-$('btn-mute').textContent = settings.muted ? '🔇' : '🔊';
+$('btn-mute').innerHTML = icon(settings.muted ? 'mute' : 'sound');
 requestAnimationFrame(loop);

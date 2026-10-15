@@ -14,71 +14,120 @@
     <!-- 카카오톡 링크 미리보기 카드 -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content="词块 HSK4 · 단어블록 테트리스" />
-    <meta property="og:description" content="HSK 4급 1000단어를 블록처럼 쌓고 짝꿍어휘로 터뜨려라! 25단어씩 구간 연습" />
+    <meta property="og:description" content="HSK 4급 1000단어를 블록처럼 쌓고 짝꿍어휘로 터뜨려요! 스테이지를 하나씩 열어 가는 중국어 단어 게임" />
     <meta property="og:url" content="https://jindam1799.github.io/jindam_tetris_new/" />
     <meta property="og:image" content="https://jindam1799.github.io/jindam_tetris_new/icon/icon-512.png" />
     <meta property="og:image:width" content="512" />
     <meta property="og:image:height" content="512" />
     <meta name="author" content="진담중국어" />
     <meta name="copyright" content="© 2026 진담중국어. All rights reserved." />
-    <meta name="description" content="HSK 4급 1000단어를 블록처럼 쌓고 짝꿍어휘로 터뜨려라! 25단어씩 구간 연습" />
-    <meta name="theme-color" content="#120a24" />
+    <meta name="description" content="HSK 4급 1000단어를 블록처럼 쌓고 짝꿍어휘로 터뜨려요! 스테이지를 하나씩 열어 가는 중국어 단어 게임" />
+    <meta name="theme-color" content="#8ED6FF" />
     <link rel="icon" type="image/png" href="icon/icon-192.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Chakra+Petch:wght@600;700&family=Ma+Shan+Zheng&family=Noto+Sans+KR:wght@400;700;900&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body data-mode="LOBBY">
+    <!-- ===== 아이콘 모음 (이모지 대신 직접 그린 아이콘) ===== -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <symbol id="i-sound" viewBox="0 0 24 24"><path d="M3.5 9.5h3.8L12 5.6v12.8l-4.7-3.9H3.5z" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" /><path d="M15.6 9.2a4 4 0 0 1 0 5.6M18.2 6.6a7.6 7.6 0 0 1 0 10.8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" /></symbol>
+        <symbol id="i-mute" viewBox="0 0 24 24"><path d="M3.5 9.5h3.8L12 5.6v12.8l-4.7-3.9H3.5z" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" /><path d="M15.8 9.4l5 5.2M20.8 9.4l-5 5.2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" /></symbol>
+        <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="5" width="4.2" height="14" rx="1.6" fill="currentColor" /><rect x="13.8" y="5" width="4.2" height="14" rx="1.6" fill="currentColor" /></symbol>
+        <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" /><circle cx="9" cy="7" r="2.4" fill="#fff" stroke="currentColor" stroke-width="2.2" /><circle cx="15.5" cy="12" r="2.4" fill="#fff" stroke="currentColor" stroke-width="2.2" /><circle cx="8" cy="17" r="2.4" fill="#fff" stroke="currentColor" stroke-width="2.2" /></symbol>
+        <symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 11.5L12 4.2l8.5 7.3M6 10v9.6h4.5v-5.2h3v5.2H18V10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></symbol>
+        <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M7 4h10v4.5a5 5 0 0 1-10 0z" fill="currentColor" /><path d="M7 6.2H4.6a2.6 2.6 0 0 0 2.8 4M17 6.2h2.4a2.6 2.6 0 0 1-2.8 4M12 13.5v3.6M8.5 20h7M9.8 17.2h4.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></symbol>
+        <symbol id="i-book" viewBox="0 0 24 24"><path d="M12 6.6C10 5 7 4.5 3.8 5v13.2c3.2-.5 6.2 0 8.2 1.6 2-1.6 5-2.1 8.2-1.6V5C17 4.5 14 5 12 6.6zM12 6.6v13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" /></symbol>
+        <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 2.6l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 16.9l-5.6 2.9 1.1-6.2L3 9.2l6.2-.9z" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" /></symbol>
+        <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.6" fill="currentColor" /><path d="M8.2 10.5V8a3.8 3.8 0 0 1 7.6 0v2.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" /></symbol>
+        <symbol id="i-play" viewBox="0 0 24 24"><path d="M7.5 4.8v14.4c0 .9 1 1.4 1.7.9l10.6-7.2a1.1 1.1 0 0 0 0-1.8L9.2 3.9c-.7-.5-1.7 0-1.7.9z" fill="currentColor" /></symbol>
+        <symbol id="i-retry" viewBox="0 0 24 24"><path d="M19 12a7 7 0 1 1-2.1-5M19.2 4.4v4.8h-4.8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></symbol>
+        <symbol id="i-back" viewBox="0 0 24 24"><path d="M14.5 5.5L8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" /></symbol>
+        <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 5.2l7.6 10.4c.5.7 0 1.6-.8 1.6H5.2c-.8 0-1.3-.9-.8-1.6z" fill="currentColor" /></symbol>
+        <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 18.8l7.6-10.4c.5-.7 0-1.6-.8-1.6H5.2c-.8 0-1.3.9-.8 1.6z" fill="currentColor" /></symbol>
+        <symbol id="i-left" viewBox="0 0 24 24"><path d="M5.2 12l10.4-7.6c.7-.5 1.6 0 1.6.8v13.6c0 .8-.9 1.3-1.6.8z" fill="currentColor" /></symbol>
+        <symbol id="i-right" viewBox="0 0 24 24"><path d="M18.8 12L8.4 4.4c-.7-.5-1.6 0-1.6.8v13.6c0 .8.9 1.3 1.6.8z" fill="currentColor" /></symbol>
+        <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M18.5 12.5a6.5 6.5 0 1 1-2-4.7M17.2 3.6v4.6h-4.6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" /></symbol>
+        <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3.8v11M6.8 10.2L12 15.4l5.2-5.2M5 20h14" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" /></symbol>
+        <symbol id="i-phone" viewBox="0 0 24 24"><rect x="6.5" y="2.5" width="11" height="19" rx="2.8" fill="none" stroke="currentColor" stroke-width="2.2" /><path d="M10.5 18.5h3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" /></symbol>
+        <symbol id="i-close" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" /></symbol>
+        <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.6l4.5 4.5L19 7.6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /></symbol>
+        <symbol id="i-bomb" viewBox="0 0 24 24"><circle cx="10.5" cy="14" r="6.6" fill="currentColor" /><path d="M14.8 9.4l2.4-2.4" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" /><path d="M19 3.4v2.2M21 5.6h-2.2M17.4 3.8l.8.8" stroke="#FFB800" stroke-width="1.8" stroke-linecap="round" /></symbol>
+        <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13.4 2.5L5.4 13.6h5.6L9.8 21.5l8.4-11.7h-5.7z" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" /></symbol>
+        <symbol id="i-gravity" viewBox="0 0 24 24"><path d="M6.5 4.8L12 10.3l5.5-5.5M6.5 12.2l5.5 5.5 5.5-5.5" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" /></symbol>
+        <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 2.5c.8 4.6 2.9 6.7 7.5 7.5-4.6.8-6.7 2.9-7.5 7.5-.8-4.6-2.9-6.7-7.5-7.5 4.6-.8 6.7-2.9 7.5-7.5z" fill="currentColor" /><circle cx="19" cy="18.5" r="1.8" fill="currentColor" /></symbol>
+        <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3.8L21 19.6H3z" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round" /><path d="M12 9.8v4.2M12 16.9v.2" stroke="#fff" stroke-width="2.4" stroke-linecap="round" /></symbol>
+        <symbol id="i-chart" viewBox="0 0 24 24"><path d="M5 19.5v-5M10 19.5v-9M15 19.5v-6.5M20 19.5V5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" /></symbol>
+        <symbol id="i-note" viewBox="0 0 24 24"><path d="M6 3.5h8.6L18.5 7.4v13.1H6z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" /><path d="M9 11.5h6M9 15.5h6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" /></symbol>
+        <symbol id="i-blocks" viewBox="0 0 24 24"><rect x="3.5" y="12.5" width="8" height="8" rx="2" fill="currentColor" /><rect x="12.5" y="12.5" width="8" height="8" rx="2" fill="currentColor" opacity=".55" /><rect x="8" y="3.5" width="8" height="8" rx="2" fill="currentColor" opacity=".8" /></symbol>
+        <symbol id="i-quiz" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.2" /><path d="M9.4 9.4a2.7 2.7 0 1 1 3.6 2.6c-.6.3-1 .8-1 1.5v.6M12 17v.2" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" /></symbol>
+        <symbol id="i-headphones" viewBox="0 0 24 24"><path d="M4.5 15v-3a7.5 7.5 0 0 1 15 0v3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" /><rect x="3.5" y="13.5" width="4.5" height="7" rx="1.8" fill="currentColor" /><rect x="16" y="13.5" width="4.5" height="7" rx="1.8" fill="currentColor" /></symbol>
+        <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" /></symbol>
+        <!-- 판다 마스코트 '块块' -->
+        <symbol id="panda" viewBox="0 0 120 120">
+          <circle cx="28" cy="30" r="17" fill="#2B2A4C" />
+          <circle cx="92" cy="30" r="17" fill="#2B2A4C" />
+          <ellipse cx="60" cy="66" rx="47" ry="42" fill="#fff" stroke="#2B2A4C" stroke-width="5" />
+          <ellipse cx="40" cy="62" rx="12" ry="15" transform="rotate(-22 40 62)" fill="#2B2A4C" />
+          <ellipse cx="80" cy="62" rx="12" ry="15" transform="rotate(22 80 62)" fill="#2B2A4C" />
+          <circle cx="42" cy="61" r="5.2" fill="#fff" />
+          <circle cx="78" cy="61" r="5.2" fill="#fff" />
+          <circle cx="43" cy="62" r="2.6" fill="#2B2A4C" />
+          <circle cx="77" cy="62" r="2.6" fill="#2B2A4C" />
+          <ellipse cx="60" cy="78" rx="6" ry="4.2" fill="#2B2A4C" />
+          <path d="M53 85q7 6 14 0" fill="none" stroke="#2B2A4C" stroke-width="3.4" stroke-linecap="round" />
+          <circle cx="27" cy="82" r="7" fill="#FF9EB5" opacity=".85" />
+          <circle cx="93" cy="82" r="7" fill="#FF9EB5" opacity=".85" />
+          <rect x="47" y="2" width="26" height="22" rx="5" fill="#FFD23F" stroke="#2B2A4C" stroke-width="4" transform="rotate(-8 60 13)" />
+        </symbol>
+      </defs>
+    </svg>
+
     <div id="bg-deco" aria-hidden="true">
-      <span class="lantern l1"></span><span class="lantern l2"></span><span class="lantern l3"></span>
+      <span class="cloud c1"></span><span class="cloud c2"></span><span class="cloud c3"></span><span class="cloud c4"></span>
     </div>
 
     <div id="safe-probe" aria-hidden="true"></div>
     <div id="rotate-hint" class="hidden">
-      <div class="rotate-phone">📱</div>
-      <p>휴대폰을 <b>세로</b>로 돌려 주세요</p>
+      <svg class="rotate-phone"><use href="#i-phone" /></svg>
+      <p>휴대폰을 세로로 돌려 주세요</p>
     </div>
 
     <div id="browser-banner" class="hidden">
-      <span id="banner-text">🔔 Chrome에서 실행해야 효과음과 중국어 음성이 가장 잘 나와요. 함께 들어 있는
-      <b>게임시작</b> 파일로 실행해 주세요.</span>
-      <button id="banner-close" aria-label="닫기">✕</button>
+      <span id="banner-text">Chrome에서 실행해야 효과음과 중국어 음성이 가장 잘 나와요. 함께 들어 있는 <b>게임시작</b> 파일로 실행해 주세요.</span>
+      <button id="banner-close" aria-label="닫기"><svg class="ic"><use href="#i-close" /></svg></button>
     </div>
 
     <div id="stage">
-      <!-- ===== 상단 헤더 ===== -->
+      <!-- ===== 상단 ===== -->
       <header id="topbar">
         <div class="brand">
-          <img src="icon/icon-192.png" alt="" class="brand-icon" />
+          <svg class="brand-panda"><use href="#panda" /></svg>
           <div>
             <div class="brand-title">词块 HSK4</div>
-            <div class="brand-sub">단어블록 테트리스 · HSK 4급 1000단어</div>
+            <div class="brand-sub">단어블록 테트리스</div>
           </div>
         </div>
-        <div class="top-score"><span>SCORE</span><b id="score-m">0</b></div>
+        <div class="top-score"><span>점수</span><b id="score-m">0</b></div>
         <div class="top-actions">
           <span id="mode-badge" class="mode-badge">LOBBY</span>
-          <button class="icon-btn" id="btn-mute" title="음소거 (M)">🔊</button>
-          <button class="icon-btn" id="btn-pause" title="일시정지 (P)">⏸</button>
-          <button class="icon-btn" id="btn-settings" title="설정">⚙️</button>
-          <button class="icon-btn" id="btn-home" title="로비로">🏠</button>
+          <button class="icon-btn" id="btn-mute" title="소리 끄기 (M)" aria-label="소리"><svg class="ic"><use href="#i-sound" /></svg></button>
+          <button class="icon-btn" id="btn-pause" title="잠깐 멈춤 (P)" aria-label="잠깐 멈춤"><svg class="ic"><use href="#i-pause" /></svg></button>
+          <button class="icon-btn" id="btn-settings" title="설정" aria-label="설정"><svg class="ic"><use href="#i-settings" /></svg></button>
+          <button class="icon-btn" id="btn-home" title="처음 화면" aria-label="처음 화면"><svg class="ic"><use href="#i-home" /></svg></button>
         </div>
       </header>
 
       <main id="play-area">
-        <!-- ===== 왼쪽 패널 ===== -->
+        <!-- ===== 왼쪽: 미션 ===== -->
         <aside class="panel" id="left-panel">
-
-          <section class="card">
-            <h3 class="card-title"><span>아이템<span class="pc-only">&nbsp;게이지</span></span></h3>
-            <div id="gauge-slots">
-              <span class="slot"></span><span class="slot"></span><span class="slot"></span><span class="slot"></span><span class="slot"></span>
-            </div>
-            <p class="hint">퀴즈 5번 맞히면 아이템!</p>
+          <section class="card mission">
+            <h3 class="card-title">미션</h3>
+            <div class="stat stage-stat"><span>스테이지</span><b id="level">1</b></div>
+            <div class="stat words-stat"><b id="lines-left">25</b><span>남은 단어</span></div>
+            <div id="level-bar"><div id="level-fill"></div></div>
           </section>
 
           <section class="card" id="streak-card">
@@ -88,13 +137,15 @@
               <span class="streak-label">连对</span>
             </div>
             <div id="fever-bar"><div id="fever-fill"></div></div>
-            <p class="hint" id="fever-hint">3연속 정답 → FEVER ×2</p>
+            <p class="hint" id="fever-hint">3개 연속 맞히면 점수 2배</p>
           </section>
 
-          <section class="card stats">
-            <div class="stat"><span>STAGE</span><b id="level">1</b></div>
-            <div class="stat"><span>남은 단어</span><b id="lines-left">25</b></div>
-            <div id="level-bar"><div id="level-fill"></div></div>
+          <section class="card item-card">
+            <h3 class="card-title">아이템<span class="pc-only">&nbsp;모으기</span></h3>
+            <div id="gauge-slots">
+              <span class="slot"></span><span class="slot"></span><span class="slot"></span><span class="slot"></span><span class="slot"></span>
+            </div>
+            <p class="hint">퀴즈 5개 맞히면 아이템 블록</p>
           </section>
         </aside>
 
@@ -108,14 +159,14 @@
           <div id="countdown" class="hidden"></div>
         </div>
 
-        <!-- ===== 오른쪽 패널 ===== -->
+        <!-- ===== 오른쪽 ===== -->
         <aside class="panel" id="right-panel">
-          <section class="card">
-            <h3 class="card-title">NEXT</h3>
+          <section class="card next-card">
+            <h3 class="card-title">다음 블록</h3>
             <canvas id="next-canvas" width="160" height="330"></canvas>
           </section>
           <section class="card score-card">
-            <h3 class="card-title">SCORE</h3>
+            <h3 class="card-title">점수</h3>
             <div id="score">0</div>
             <div class="mini-stats">
               <span>콤보 <b id="combo">0</b></span>
@@ -123,69 +174,76 @@
             </div>
           </section>
           <section class="card keys">
-            <h3 class="card-title">조작법</h3>
+            <h3 class="card-title">키보드</h3>
             <ul>
-              <li><kbd>←</kbd><kbd>→</kbd> 이동</li>
-              <li><kbd>↑</kbd><kbd>X</kbd> 회전 · <kbd>Z</kbd> 역회전</li>
-              <li><kbd>↓</kbd> 소프트 드롭</li>
-              <li><kbd>Space</kbd> 하드 드롭</li>
-              <li><kbd>P</kbd> 일시정지 · <kbd>M</kbd> 소리</li>
-              <li><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 퀴즈 · <kbd>R</kbd> 다시 듣기</li>
+              <li><kbd>←</kbd><kbd>→</kbd> 옮기기</li>
+              <li><kbd>↑</kbd> 돌리기</li>
+              <li><kbd>↓</kbd> 천천히 내리기</li>
+              <li><kbd>Space</kbd> 바로 떨어뜨리기</li>
+              <li><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 퀴즈 답</li>
+              <li><kbd>P</kbd> 멈춤 <kbd>M</kbd> 소리</li>
             </ul>
           </section>
         </aside>
       </main>
 
-      <!-- ===== 터치 조작 버튼 (휴대폰·태블릿) ===== -->
+      <!-- ===== 터치 조작 (휴대폰·태블릿) ===== -->
       <div id="touch-controls">
         <div class="tc-group tc-left">
-          <button class="tc-btn tc-main" data-act="cw" style="grid-area: u" aria-label="회전">▲</button>
-          <button class="tc-btn" data-act="left" style="grid-area: l" aria-label="왼쪽">◀</button>
-          <button class="tc-btn" data-act="down" style="grid-area: d" aria-label="아래">▼</button>
-          <button class="tc-btn" data-act="right" style="grid-area: r" aria-label="오른쪽">▶</button>
+          <button class="tc-btn tc-main" data-act="cw" style="grid-area: u" aria-label="돌리기"><svg class="ic"><use href="#i-rotate" /></svg></button>
+          <button class="tc-btn" data-act="left" style="grid-area: l" aria-label="왼쪽"><svg class="ic"><use href="#i-left" /></svg></button>
+          <button class="tc-btn" data-act="down" style="grid-area: d" aria-label="아래"><svg class="ic"><use href="#i-down" /></svg></button>
+          <button class="tc-btn" data-act="right" style="grid-area: r" aria-label="오른쪽"><svg class="ic"><use href="#i-right" /></svg></button>
         </div>
         <div class="tc-group tc-right">
-          <button class="tc-btn tc-drop" data-act="drop" style="grid-area: drop">⤓<span>드롭</span></button>
+          <button class="tc-btn tc-drop" data-act="drop" style="grid-area: drop"><svg class="ic"><use href="#i-drop" /></svg><span>드롭</span></button>
         </div>
       </div>
 
-      <!-- ================= 오버레이 화면들 ================= -->
+      <!-- ================= 화면들 ================= -->
 
-      <!-- 인트로 -->
+      <!-- 처음 화면 -->
       <div class="overlay" id="intro-ui">
         <div class="intro-box">
-          <img src="icon/icon-512.png" alt="" class="intro-icon" />
-          <h1 class="intro-title"><span class="intro-cikuai">词块</span><br /><span>HSK 4</span></h1>
-          <p class="intro-cn">단어블록 테트리스</p>
+          <svg class="intro-panda"><use href="#panda" /></svg>
+          <h1 class="intro-title" aria-label="词块 HSK4">
+            <span class="tile t1">词</span><span class="tile t2">块</span>
+          </h1>
+          <p class="intro-hsk">HSK 4급 단어블록</p>
           <p class="blink" id="intro-hint">아무 키나 누르거나 클릭하세요</p>
-          <p class="copyright">© 2026 진담중국어. All rights reserved.</p>
         </div>
+        <p class="copyright">© 2026 진담중국어. All rights reserved.</p>
       </div>
 
-      <!-- 로비 -->
+      <!-- 모드 고르기 -->
       <div class="overlay hidden" id="lobby-ui">
-        <div class="modal wide">
-          <h2 class="modal-title">모드 선택</h2>
-          <p class="modal-sub">스테이지의 단어를 모두 맞히고 살아남으면 다음 스테이지가 열려요</p>
+        <div class="modal wide lobby-modal">
+          <div class="lobby-head">
+            <svg class="lobby-panda"><use href="#panda" /></svg>
+            <div>
+              <h2 class="modal-title">어떤 모드로 놀까요?</h2>
+              <p class="modal-sub">스테이지 단어를 모두 맞히고 끝까지 살아남으면 다음 스테이지가 열려요</p>
+            </div>
+          </div>
           <div class="mode-cards two">
             <div class="mode-card normal" data-mode="NORMAL">
               <div class="mc-top">
                 <span class="mc-cn">普通</span>
                 <span class="mc-text">
                   <span class="mc-name">노멀 모드</span>
-                  <span class="mc-desc">25단어 × 40스테이지</span>
+                  <span class="mc-desc">25단어씩 40스테이지</span>
                 </span>
               </div>
               <div class="mc-progress">
-                <div class="mc-prog-row"><span>클리어</span><b class="mc-unlocked">0 / 40</b></div>
+                <div class="mc-prog-row"><span>클리어한 스테이지</span><b class="mc-unlocked">0 / 40</b></div>
                 <div class="mc-bar"><i></i></div>
-                <div class="mc-best">최고 기록 · 아직 없음</div>
+                <div class="mc-best">최고 기록 없음</div>
               </div>
               <ul class="mc-rules">
-                <li>스테이지 단어를 다 맞히고 살아남으면 클리어</li>
-                <li>올라갈수록 빨라지고 방해 블록·낙석 증가</li>
+                <li>천천히 시작해서 점점 빨라져요</li>
+                <li>방해 블록과 떨어지는 돌이 조금씩 늘어요</li>
               </ul>
-              <button class="mc-play">▶ STAGE 1 시작</button>
+              <button class="mc-play">STAGE 1 시작</button>
               <button class="mc-map">스테이지 고르기</button>
             </div>
             <div class="mode-card hell" data-mode="HELL">
@@ -193,43 +251,43 @@
                 <span class="mc-cn">地狱</span>
                 <span class="mc-text">
                   <span class="mc-name">헬 모드</span>
-                  <span class="mc-desc">100단어 × 10스테이지</span>
+                  <span class="mc-desc">100단어씩 10스테이지</span>
                 </span>
               </div>
               <div class="mc-progress">
-                <div class="mc-prog-row"><span>클리어</span><b class="mc-unlocked">0 / 10</b></div>
+                <div class="mc-prog-row"><span>클리어한 스테이지</span><b class="mc-unlocked">0 / 10</b></div>
                 <div class="mc-bar"><i></i></div>
-                <div class="mc-best">최고 기록 · 아직 없음</div>
+                <div class="mc-best">최고 기록 없음</div>
               </div>
               <ul class="mc-rules">
-                <li>1스테이지부터 노멀 최종보다 어려워요</li>
-                <li>특수 블록 · 좌우반전 · 지진 · 짧은 퀴즈 시간</li>
+                <li>첫 스테이지부터 노멀 마지막보다 어려워요</li>
+                <li>특수 블록, 좌우 반전, 지진이 나와요</li>
               </ul>
-              <button class="mc-play">▶ STAGE 1 시작</button>
+              <button class="mc-play">STAGE 1 시작</button>
               <button class="mc-map">스테이지 고르기</button>
             </div>
           </div>
           <div class="lobby-links">
-            <button class="ghost-btn" id="btn-open-rank">🏆 명예의 전당</button>
-            <button class="ghost-btn" id="btn-open-howto">📖 게임 방법</button>
-            <button class="ghost-btn" id="btn-open-settings">⚙️ 설정</button>
+            <button class="ghost-btn" id="btn-open-rank"><svg class="ic"><use href="#i-trophy" /></svg>명예의 전당</button>
+            <button class="ghost-btn" id="btn-open-howto"><svg class="ic"><use href="#i-book" /></svg>게임 방법</button>
+            <button class="ghost-btn" id="btn-open-settings"><svg class="ic"><use href="#i-settings" /></svg>설정</button>
           </div>
           <p class="copyright">© 2026 진담중국어. All rights reserved.</p>
         </div>
       </div>
 
-      <!-- 연습 구간 선택 -->
+      <!-- 스테이지 지도 -->
       <div class="overlay hidden" id="section-ui">
         <div class="modal wide section-modal">
           <div class="section-head">
-            <button class="ghost-btn" id="btn-section-back">← 모드</button>
-            <h2 class="modal-title" id="section-title">구간 선택</h2>
+            <button class="ghost-btn" id="btn-section-back"><svg class="ic"><use href="#i-back" /></svg>모드</button>
+            <h2 class="modal-title" id="section-title">스테이지</h2>
             <span class="section-spacer"></span>
           </div>
           <p class="modal-sub" id="section-summary"></p>
           <div id="section-grid" class="scrollable"></div>
-          <button class="primary-btn" id="btn-map-continue">▶ STAGE 1 시작</button>
-          <p class="hint">★ 클리어 · 🔒 앞 스테이지를 클리어하면 열려요 · 클리어한 스테이지는 다시 할 수 있어요</p>
+          <button class="primary-btn" id="btn-map-continue">STAGE 1 시작</button>
+          <p class="hint">별이 붙은 곳은 클리어한 스테이지예요. 자물쇠는 앞 스테이지를 클리어하면 풀려요.</p>
         </div>
       </div>
 
@@ -238,20 +296,18 @@
         <div class="modal wide">
           <h2 class="modal-title">게임 방법</h2>
           <div class="howto-grid">
-            <div><h4>🧱 스테이지</h4><p>스테이지의 단어를 <b>모두 맞히고</b> 살아남으면 클리어 → 다음 스테이지가 열려요. 다음에 와서 이어서 할 수 있어요.</p></div>
-            <div><h4>❓ 퀴즈</h4><p>블록 3개마다(헬은 2개) 퀴즈! 한→중, 중→한, <b>듣기</b>, <b>🧩 짝꿍어휘</b> 문제가 섞여 나와요.</p></div>
-            <div><h4>🎁 아이템</h4><p>정답 5개를 모으면 아이템 블록!<br />💣 火烧连营 3×3 폭파<br />⏬ 泰山压顶 전부 내려앉기<br />⚡ 一扫而光 바닥 2줄 삭제</p></div>
-            <div><h4>🔥 FEVER</h4><p>3문제 연속 정답이면 15초 동안 <b>점수 2배</b>!</p></div>
-            <div><h4>⚠️ 방해</h4><p>틀리거나 시간 초과 → 바닥에서 방해 줄이 올라와요. 헬 모드에선 좌우반전·지진도!</p></div>
-            <div><h4>📈 난이도</h4><p>노멀 25단어×40, 헬 100단어×10스테이지. 올라갈수록 빨라지고 방해 블록·낙석이 늘어요. 틀린 단어는 2문제 뒤에 다시!</p></div>
-            <div><h4>📒 오답 노트</h4><p>게임이 끝나면 틀린 단어를 발음과 함께 다시 볼 수 있어요.</p></div>
+            <div><h4><svg class="ic"><use href="#i-blocks" /></svg>스테이지</h4><p>스테이지 단어를 <b>모두 맞히고</b> 살아남으면 클리어! 다음 스테이지가 열리고, 다음에 와서 이어서 할 수 있어요.</p></div>
+            <div><h4><svg class="ic"><use href="#i-quiz" /></svg>퀴즈</h4><p>블록 3개마다(헬은 2개) 퀴즈가 나와요. 한국어 보고 중국어 고르기, 중국어 보고 뜻 고르기, <b>듣기</b>, <b>짝꿍어휘</b> 문제가 섞여 있어요.</p></div>
+            <div><h4><svg class="ic"><use href="#i-sparkle" /></svg>아이템</h4><p>정답 5개를 모으면 아이템 블록이 와요.<br /><b>폭탄</b> 火烧连营 주변 3×3 펑!<br /><b>내려앉기</b> 泰山压顶 빈칸 없이 쏙<br /><b>번개</b> 一扫而光 바닥 2줄 삭제</p></div>
+            <div><h4><svg class="ic"><use href="#i-star" /></svg>점수 2배</h4><p>퀴즈를 3개 연속 맞히면 15초 동안 <b>점수가 2배</b>예요.</p></div>
+            <div><h4><svg class="ic"><use href="#i-warn" /></svg>방해</h4><p>틀리거나 시간이 지나면 바닥에서 방해 줄이 올라와요. 헬 모드에선 좌우 반전과 지진도 있어요.</p></div>
+            <div><h4><svg class="ic"><use href="#i-chart" /></svg>난이도</h4><p>스테이지가 오를수록 빨라지고 방해 블록과 떨어지는 돌이 늘어요. 틀린 단어는 2문제 뒤에 다시 나와요.</p></div>
+            <div><h4><svg class="ic"><use href="#i-note" /></svg>오답 노트</h4><p>게임이 끝나면 틀린 단어를 발음과 함께 다시 볼 수 있어요.</p></div>
           </div>
-          <p class="credit">단어: HSK 4급 필수 어휘 1000 · 짝꿍어휘는 말하기 연습을 위해 진담중국어가 추가한 표현이에요.<br />게임·디자인·짝꿍어휘 © 2026 진담중국어. All rights reserved.<br />무단 복제·배포를 금지합니다.</p>
-          <button class="primary-btn" data-close="howto-ui">확인</button>
+          <p class="credit">단어: HSK 4급 필수 어휘 1000개. 짝꿍어휘는 말하기 연습을 위해 진담중국어가 추가한 표현이에요.<br />게임, 디자인, 짝꿍어휘 © 2026 진담중국어. All rights reserved. 무단 복제와 배포를 금지합니다.</p>
+          <button class="primary-btn" data-close="howto-ui">알겠어요</button>
         </div>
       </div>
-
-      <!-- 카운트다운은 board 안 -->
 
       <!-- 퀴즈 -->
       <div class="overlay quiz-overlay hidden" id="quiz-ui">
@@ -263,53 +319,54 @@
           <div id="quiz-prompt">
             <div id="quiz-word">단어</div>
             <div id="quiz-sub"></div>
-            <button id="quiz-listen" class="listen-btn hidden" title="다시 듣기 (R)">🔊 다시 듣기 <kbd>R</kbd></button>
+            <button id="quiz-listen" class="listen-btn hidden" title="다시 듣기 (R)"><svg class="ic"><use href="#i-sound" /></svg>다시 듣기 <kbd>R</kbd></button>
           </div>
           <div id="quiz-options"></div>
           <div id="quiz-timer"><div id="quiz-timer-fill"></div></div>
         </div>
       </div>
 
-      <!-- 일시정지 -->
+      <!-- 잠깐 멈춤 -->
       <div class="overlay hidden" id="pause-ui">
         <div class="modal">
-          <h2 class="modal-title">일시정지</h2>
-          <p class="modal-sub">暂停 · 잠깐 쉬어 가요</p>
+          <svg class="modal-panda"><use href="#panda" /></svg>
+          <h2 class="modal-title">잠깐 쉬어요</h2>
+          <p class="modal-sub">준비되면 계속하기를 눌러요</p>
           <button class="primary-btn" id="btn-resume">계속하기 <kbd>P</kbd></button>
-          <button class="ghost-btn full" id="btn-pause-settings">⚙️ 설정</button>
-          <button class="ghost-btn full" id="btn-quit">🏠 로비로 나가기</button>
+          <button class="ghost-btn full" id="btn-pause-settings"><svg class="ic"><use href="#i-settings" /></svg>설정</button>
+          <button class="ghost-btn full" id="btn-quit"><svg class="ic"><use href="#i-home" /></svg>처음 화면으로</button>
         </div>
       </div>
 
-      <!-- 레벨 클리어 -->
+      <!-- 스테이지 클리어 -->
       <div class="overlay hidden" id="level-clear-ui">
         <div class="modal gold">
           <div class="big-cn" id="clear-big">过关!</div>
-          <h2 class="modal-title">STAGE <span id="clear-level">1</span> CLEAR</h2>
+          <h2 class="modal-title">STAGE <span id="clear-level">1</span> 클리어</h2>
           <p class="unlock-msg" id="unlock-msg"></p>
           <div class="stat-grid">
-            <div><span>소요 시간</span><b id="level-time">00:00</b></div>
+            <div><span>걸린 시간</span><b id="level-time">00:00</b></div>
             <div><span>최대 콤보</span><b id="level-combo">0</b></div>
-            <div><span>획득 점수</span><b id="level-score">0</b></div>
+            <div><span>얻은 점수</span><b id="level-score">0</b></div>
             <div><span>퀴즈 정답</span><b id="level-quiz">0/0</b></div>
           </div>
-          <button class="primary-btn" id="next-level-btn">다음 레벨 <kbd>Enter</kbd></button>
+          <button class="primary-btn" id="next-level-btn">다음 스테이지 <kbd>Enter</kbd></button>
         </div>
       </div>
 
-      <!-- 게임 오버 -->
+      <!-- 게임 끝 -->
       <div class="overlay hidden" id="game-over-ui">
         <div class="modal wide">
           <div class="big-cn red" id="over-title">游戏结束</div>
           <p class="modal-sub" id="over-sub"></p>
           <div class="stat-grid four">
             <div><span>점수</span><b id="final-score">0</b></div>
-            <div><span>도달 스테이지</span><b id="final-level">1</b></div>
+            <div><span>도착한 스테이지</span><b id="final-level">1</b></div>
             <div><span>지운 줄</span><b id="final-lines">0</b></div>
             <div><span>정답률</span><b id="final-acc">-</b></div>
           </div>
           <div id="review-box">
-            <h4>📒 오답 노트 <small>단어를 누르면 발음을 들려줘요</small></h4>
+            <h4><svg class="ic"><use href="#i-note" /></svg>오답 노트 <small>단어를 누르면 발음을 들려줘요</small></h4>
             <ul id="review-list" class="scrollable"></ul>
           </div>
           <div id="save-row">
@@ -317,21 +374,21 @@
             <button class="primary-btn inline" id="save-rank-btn">기록 저장</button>
           </div>
           <div class="btn-row">
-            <button class="ghost-btn" id="retry-btn">🔁 다시 하기</button>
-            <button class="ghost-btn" id="restart-btn">🏠 로비로</button>
+            <button class="ghost-btn" id="retry-btn"><svg class="ic"><use href="#i-retry" /></svg>다시 하기</button>
+            <button class="ghost-btn" id="restart-btn"><svg class="ic"><use href="#i-home" /></svg>처음 화면</button>
           </div>
         </div>
       </div>
 
-      <!-- 랭킹 -->
+      <!-- 명예의 전당 -->
       <div class="overlay hidden" id="ranking-ui">
         <div class="modal">
-          <h2 class="modal-title">🏆 명예의 전당</h2>
+          <h2 class="modal-title"><svg class="ic title-ic"><use href="#i-trophy" /></svg>명예의 전당</h2>
           <div class="rank-tabs">
-            <button id="tab-normal" class="active">普通 NORMAL</button>
-            <button id="tab-hell">地狱 HELL</button>
+            <button id="tab-normal" class="active">노멀</button>
+            <button id="tab-hell">헬</button>
           </div>
-          <div class="rank-head"><span>#</span><span>닉네임</span><span>스테이지</span><span>점수</span></div>
+          <div class="rank-head"><span>순위</span><span>닉네임</span><span>스테이지</span><span>점수</span></div>
           <ul id="rank-list" class="scrollable"></ul>
           <button class="primary-btn" id="close-rank-btn">닫기</button>
         </div>
@@ -340,7 +397,7 @@
       <!-- 설정 -->
       <div class="overlay hidden" id="settings-ui">
         <div class="modal">
-          <h2 class="modal-title">⚙️ 설정</h2>
+          <h2 class="modal-title">설정</h2>
           <label class="set-row">배경음악 <input type="range" id="set-bgm" min="0" max="100" /></label>
           <label class="set-row">효과음 <input type="range" id="set-sfx" min="0" max="100" /></label>
           <label class="set-row">중국어 음성 <input type="checkbox" id="set-tts" /></label>
@@ -349,10 +406,10 @@
             <select id="set-voice"></select>
             <small id="voice-note"></small>
           </label>
-          <label class="set-row">▼ 버튼 속도 <span class="soft-wrap"><small>느림</small><input type="range" id="set-soft" min="1" max="10" step="1" /><small>빠름</small><b id="soft-val">5</b></span></label>
-          <label class="set-row">고스트 블록 <input type="checkbox" id="set-ghost" /></label>
+          <label class="set-row">아래 버튼 속도 <span class="soft-wrap"><small>느림</small><input type="range" id="set-soft" min="1" max="10" step="1" /><small>빠름</small><b id="soft-val">5</b></span></label>
+          <label class="set-row">떨어질 자리 보기 <input type="checkbox" id="set-ghost" /></label>
           <div class="btn-row">
-            <button class="ghost-btn" id="btn-test-voice">🔈 음성 테스트</button>
+            <button class="ghost-btn" id="btn-test-voice"><svg class="ic"><use href="#i-sound" /></svg>음성 듣기</button>
             <button class="primary-btn inline" data-close="settings-ui">확인</button>
           </div>
         </div>
