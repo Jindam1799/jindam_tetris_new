@@ -212,7 +212,7 @@ const Sound = (() => {
     },
     ui: () => tone(700, 0.04, { vol: 0.08 }),
   };
-  return { init, setVolume, sfx };
+  return { init, setVolume, sfx, ctx: () => ctx };
 })();
 const S = Sound.sfx;
 
@@ -224,58 +224,82 @@ const BGM = (() => {
     HELL: ['hell', 'hell2'],
     over: ['over'],
   };
-  let cur = null;
+  // 오디오 요소를 하나만 만들어 계속 재사용 → 아이폰에서도 첫 터치 이후 음악 전환이 막히지 않음
+  const el = new Audio();
+  el.loop = true;
+  el.preload = 'auto';
+  const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   let curKey = '';
   let duck = 1;
-  const vol = () => (settings.muted ? 0 : (settings.bgm / 100) * 0.6 * duck);
+  let gain = null; // 아이폰은 audio.volume이 안 먹혀서 Web Audio로 볼륨 조절
+  let fadeId = 0;
+  const target = () => (settings.muted ? 0 : (settings.bgm / 100) * 0.6 * duck);
+  const setVol = (v) => {
+    v = Math.max(0, Math.min(1, v));
+    if (gain) gain.gain.value = v;
+    else el.volume = v;
+  };
+  const getVol = () => (gain ? gain.gain.value : el.volume);
 
-  function fade(a, target, ms, done) {
-    const id = (a._fade = (a._fade || 0) + 1);
-    const start = a.volume;
+  function attach(ctx) {
+    if (gain || !ctx || !IOS || !/^https?:$/.test(location.protocol)) return;
+    try {
+      const src = ctx.createMediaElementSource(el);
+      gain = ctx.createGain();
+      src.connect(gain);
+      gain.connect(ctx.destination);
+      el.volume = 1;
+    } catch (e) {
+      gain = null;
+    }
+  }
+  function fade(to, ms, done) {
+    const id = ++fadeId;
+    const from = getVol();
     const t0 = performance.now();
     const step = () => {
-      if (a._fade !== id) return;
+      if (id !== fadeId) return;
       const k = Math.min(1, (performance.now() - t0) / ms);
-      a.volume = Math.max(0, Math.min(1, start + (target - start) * k));
+      setVol(from + (to - from) * k);
       if (k < 1) setTimeout(step, 30);
       else if (done) done();
     };
     step();
   }
   function play(key) {
-    if (cur && curKey === key && key === 'lobby' && !cur.paused) return;
-    stop();
-    const list = TRACKS[key];
-    const a = new Audio('sound/' + list[Math.floor(Math.random() * list.length)] + '.mp3');
-    a.loop = true;
-    a.volume = 0;
-    cur = a;
+    if (curKey === key && key === 'lobby' && !el.paused) return;
     curKey = key;
-    a.play().catch(() => {});
-    fade(a, vol(), 700);
-  }
-  function stop() {
-    if (!cur) return;
-    const a = cur;
-    cur = null;
-    curKey = '';
-    fade(a, 0, 350, () => a.pause());
+    const list = TRACKS[key];
+    const src = 'sound/' + list[Math.floor(Math.random() * list.length)] + '.mp3';
+    const start = () => {
+      el.src = src;
+      setVol(0);
+      el.play().catch(() => {});
+      fade(target(), 700);
+    };
+    if (!el.paused && getVol() > 0.01) fade(0, 300, start);
+    else start();
   }
   return {
     play,
-    stop,
+    attach,
+    stop() {
+      curKey = '';
+      fade(0, 300, () => el.pause());
+    },
     setDuck(d) {
       duck = d;
-      if (cur) fade(cur, vol(), 250);
+      fade(target(), 250);
     },
     refresh() {
-      if (cur) cur.volume = vol();
+      fadeId++;
+      setVol(target());
     },
     pause() {
-      if (cur) cur.pause();
+      el.pause();
     },
     resume() {
-      if (cur) cur.play().catch(() => {});
+      if (curKey) el.play().catch(() => {});
     },
   };
 })();
@@ -320,8 +344,18 @@ const TTS = (() => {
     u.pitch = 1.05;
     synth.speak(u);
   }
+  // 아이폰은 첫 터치 때 한 번 말을 시켜야 이후 음성이 나옴
+  function unlock() {
+    if (!synth) return;
+    try {
+      const u = new SpeechSynthesisUtterance(' ');
+      u.volume = 0;
+      synth.speak(u);
+    } catch (e) {}
+  }
   return {
     speak,
+    unlock,
     choose,
     get voice() {
       return voice;
@@ -651,6 +685,7 @@ function hardDrop() {
   p.y = gy;
   addScore(dist * 2, true);
   S.hard();
+  buzz(12);
   boardFx('thump');
   lockPiece();
 }
@@ -749,6 +784,7 @@ function scoreLines(rows, passive) {
   if (G.levelLines >= LINES_PER_LEVEL) G.levelUpPending = true;
 
   const comboTxt = !passive && G.combo > 0 ? `${G.combo} 连击!` : '';
+  buzz(n >= 4 ? [30, 40, 60] : 25);
   if (n >= 4) {
     S.tetris(G.combo);
     boardFx('shake-l');
@@ -768,6 +804,7 @@ function addScore(pts, quiet) {
   G.score += Math.round(pts);
   const el = $('score');
   el.textContent = G.score.toLocaleString();
+  $('score-m').textContent = el.textContent;
   if (!quiet) {
     el.classList.remove('bump');
     void el.offsetWidth;
@@ -1101,6 +1138,7 @@ function answerQuiz(i) {
     }
   } else {
     S.wrong();
+    buzz([40, 50, 40]);
     G.streak = 0;
     if (!practice) G.gauge = 0;
     G.missed.set(z.q.cn, z.q);
@@ -1130,12 +1168,14 @@ const nextCtx = $('next-canvas').getContext('2d');
 const boardWrap = $('board-wrap');
 
 function drawCell(c, v, x, y, size = BS, alpha = 1) {
+  const k = c.canvas._k || 1;
   c.globalAlpha = alpha;
-  c.drawImage(sprite(v, size), x, y);
+  c.drawImage(sprite(v, Math.max(8, Math.round(size * k))), x, y, size, size);
   c.globalAlpha = 1;
 }
 function render(now) {
-  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.setTransform(cv._k || 1, 0, 0, cv._k || 1, 0, 0);
+  ctx.clearRect(0, 0, 400, 800);
   // 격자
   ctx.strokeStyle = G.mode === 'HELL' ? 'rgba(255,80,60,0.07)' : 'rgba(255,255,255,0.045)';
   ctx.lineWidth = 1;
@@ -1233,6 +1273,8 @@ function render(now) {
   renderFx();
 }
 function renderFx() {
+  const fk = fx.canvas._k || 1;
+  fx.setTransform(fk, 0, 0, fk, 0, 0);
   fx.clearRect(0, 0, 400, 800);
   G.trails.forEach((t) => {
     const a = t.life / t.max;
@@ -1327,8 +1369,12 @@ function drawPieceIn(c, type, cx, cy, size, alpha = 1) {
   );
 }
 function drawPreviews() {
+  const hk = holdCtx.canvas._k || 1;
+  holdCtx.setTransform(hk, 0, 0, hk, 0, 0);
   holdCtx.clearRect(0, 0, 160, 110);
   if (G.hold) drawPieceIn(holdCtx, G.hold.type, 80, 55, 30, G.holdUsed ? 0.35 : 1);
+  const nk = nextCtx.canvas._k || 1;
+  nextCtx.setTransform(nk, 0, 0, nk, 0, 0);
   nextCtx.clearRect(0, 0, 160, 330);
   (G.queue || []).slice(0, 3).forEach((p, i) => {
     drawPieceIn(nextCtx, p.type, 80, 55 + i * 110, i === 0 ? 32 : 26, i === 0 ? 1 : 0.75);
@@ -1339,6 +1385,7 @@ function drawPreviews() {
 function updateHUD() {
   if (!G.board) return;
   $('score').textContent = (G.score || 0).toLocaleString();
+  $('score-m').textContent = $('score').textContent;
   $('level').textContent = G.level;
   $('lines-left').textContent = Math.max(0, LINES_PER_LEVEL - G.levelLines);
   $('level-fill').style.width = Math.min(100, (G.levelLines / LINES_PER_LEVEL) * 100) + '%';
@@ -1604,6 +1651,8 @@ function setModeLook(mode) {
 function closeIntro() {
   if (!anyOpen('intro-ui')) return;
   Sound.init();
+  BGM.attach(Sound.ctx());
+  TTS.unlock();
   TTS.choose();
   S.ui();
   hideOverlay('intro-ui');
@@ -1921,14 +1970,229 @@ function isChrome() {
   const brands = navigator.userAgentData && navigator.userAgentData.brands;
   if (brands) return brands.some((b) => b.brand === 'Google Chrome');
   const ua = navigator.userAgent;
-  return /Chrome\//.test(ua) && !/Edg\/|OPR\/|Whale\/|SamsungBrowser/.test(ua);
+  if (/CriOS\//.test(ua)) return true; // 아이폰 Chrome
+  return /Chrome\//.test(ua) && !/Edg\/|OPR\/|Whale\/|SamsungBrowser|KAKAOTALK|NAVER|; ?wv\)/.test(ua);
+}
+function buzz(pattern) {
+  if (navigator.vibrate && !settings.muted) {
+    try {
+      navigator.vibrate(pattern);
+    } catch (e) {}
+  }
+}
+
+/* 레이아웃: desktop(키보드) / portrait(세로 터치) / landscape(가로 터치) */
+const LAYOUT_SIZE = { desktop: [960, 930], landscape: [1290, 930], portrait: [548, 918] };
+let isTouch =
+  (window.matchMedia && matchMedia('(pointer: coarse)').matches) ||
+  (navigator.maxTouchPoints > 0 && window.matchMedia && matchMedia('(hover: none)').matches);
+let layout = '';
+
+function sizeCanvas(c, lw, lh) {
+  const r = c.getBoundingClientRect();
+  if (!r.width) return;
+  const k = Math.max(1, Math.min(3, (r.width * (window.devicePixelRatio || 1)) / lw));
+  const w = Math.round(lw * k), h = Math.round(lh * k);
+  if (c.width !== w || c.height !== h) {
+    c.width = w;
+    c.height = h;
+  }
+  c._k = w / lw;
 }
 function fit() {
-  const banner = $('browser-banner').classList.contains('hidden') ? 0 : 40;
-  const s = Math.min(window.innerWidth / 960, (window.innerHeight - banner) / 930);
-  $('stage').style.setProperty('--scale', Math.max(0.4, s).toFixed(3));
+  const body = document.body;
+  body.classList.toggle('touch', isTouch);
+  const probe = $('safe-probe').getBoundingClientRect();
+  const bannerOn = !$('browser-banner').classList.contains('hidden');
+  const banner = bannerOn ? $('browser-banner').offsetHeight : 0;
+  const W = probe.width || window.innerWidth;
+  const H = (probe.height || window.innerHeight) - banner;
+
+  const next = !isTouch ? 'desktop' : H > W ? 'portrait' : 'landscape';
+  if (next !== layout) {
+    layout = next;
+    body.classList.toggle('portrait', layout === 'portrait');
+    body.classList.toggle('landscape', layout === 'landscape');
+  }
+  // 휴대폰을 가로로 눕힌 경우 → 세로로 돌리기 안내
+  const phoneLandscape = isTouch && W > H && H < 520;
+  $('rotate-hint').classList.toggle('hidden', !phoneLandscape);
+  if (phoneLandscape && G.state === 'PLAYING') togglePause();
+
+  const [dw, dh] = LAYOUT_SIZE[layout];
+  const scale = Math.max(0.3, Math.min(W / dw, H / dh));
+  const stage = $('stage');
+  stage.style.setProperty('--scale', scale.toFixed(4));
+  stage.style.left = probe.left + W / 2 + 'px';
+  stage.style.top = probe.top + banner + H / 2 + 'px';
+
+  sizeCanvas(cv, 400, 800);
+  sizeCanvas($('fx'), 400, 800);
+  sizeCanvas($('hold-canvas'), 160, 110);
+  sizeCanvas($('next-canvas'), 160, 330);
+  drawPreviews();
+  $('intro-hint').textContent = isTouch ? '화면을 터치해서 시작하세요' : '아무 키나 누르거나 클릭하세요';
 }
-if (!isChrome()) $('browser-banner').classList.remove('hidden');
+
+/* ---------------- 터치 조작 ---------------- */
+const canPlay = () => G.state === 'PLAYING' && !!G.piece;
+function pressMove(dir) {
+  if (dir < 0) keys.left = true;
+  else keys.right = true;
+  dasDir = dir;
+  dasT = arrT = 0;
+  if (canPlay()) tryMove(dir);
+}
+function releaseMove(dir) {
+  if (dir < 0) keys.left = false;
+  else keys.right = false;
+  if (dasDir === dir) dasDir = dir < 0 ? (keys.right ? 1 : 0) : keys.left ? -1 : 0;
+  dasT = arrT = 0;
+}
+const TOUCH_ACTS = {
+  left: { down: () => pressMove(-1), up: () => releaseMove(-1) },
+  right: { down: () => pressMove(1), up: () => releaseMove(1) },
+  down: {
+    down: () => {
+      G.softDrop = true;
+      G.dropAcc = Math.max(G.dropAcc || 0, SOFT_MS);
+    },
+    up: () => (G.softDrop = false),
+  },
+  cw: { down: () => canPlay() && rotate(1) },
+  ccw: { down: () => canPlay() && rotate(-1) },
+  hold: { down: () => canPlay() && holdPiece() },
+  drop: { down: () => canPlay() && hardDrop() },
+};
+document.querySelectorAll('.tc-btn').forEach((btn) => {
+  const act = TOUCH_ACTS[btn.dataset.act];
+  let held = null;
+  const release = (e) => {
+    if (held === null || (e && e.pointerId !== held)) return;
+    held = null;
+    btn.classList.remove('pressed');
+    if (act.up) act.up();
+  };
+  btn.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    Sound.init();
+    held = e.pointerId;
+    try {
+      btn.setPointerCapture(e.pointerId);
+    } catch (err) {}
+    btn.classList.add('pressed');
+    buzz(6);
+    act.down();
+  });
+  btn.addEventListener('pointerup', release);
+  btn.addEventListener('pointercancel', release);
+  btn.addEventListener('lostpointercapture', release);
+  btn.addEventListener('contextmenu', (e) => e.preventDefault());
+});
+
+/* 보드 위 제스처: 탭=회전 · 좌우로 끌기=이동 · 아래로 끌기=소프트드롭 · 아래로 휙=하드드롭 · 위로 휙=홀드 */
+let gest = null;
+boardWrap.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'mouse' || !canPlay()) return;
+  e.preventDefault();
+  Sound.init();
+  const cell = boardWrap.getBoundingClientRect().width / COLS;
+  gest = { id: e.pointerId, x0: e.clientX, y0: e.clientY, lx: e.clientX, ly: e.clientY, t0: performance.now(), ax: 0, ay: 0, moved: false, cell };
+  try {
+    boardWrap.setPointerCapture(e.pointerId);
+  } catch (err) {}
+});
+boardWrap.addEventListener('pointermove', (e) => {
+  if (!gest || e.pointerId !== gest.id || !canPlay()) return;
+  const step = gest.cell * 0.85;
+  gest.ax += e.clientX - gest.lx;
+  gest.lx = e.clientX;
+  while (Math.abs(gest.ax) >= step) {
+    const d = gest.ax > 0 ? 1 : -1;
+    tryMove(d);
+    gest.ax -= d * step;
+    gest.moved = true;
+  }
+  const dy = e.clientY - gest.ly;
+  gest.ly = e.clientY;
+  if (dy > 0 && Math.abs(e.clientY - gest.y0) > Math.abs(e.clientX - gest.x0)) {
+    gest.ay += dy;
+    while (gest.ay >= gest.cell) {
+      gest.ay -= gest.cell;
+      const p = G.piece;
+      if (p && !collide(p, 0, 1)) {
+        p.y++;
+        addScore(1, true);
+        S.soft();
+      }
+      gest.moved = true;
+    }
+  }
+});
+function endGesture(e) {
+  if (!gest || e.pointerId !== gest.id) return;
+  const g = gest;
+  gest = null;
+  if (!canPlay() || e.type === 'pointercancel') return;
+  const dt = performance.now() - g.t0;
+  const dx = g.lx - g.x0;
+  const dy = g.ly - g.y0;
+  const vy = dy / Math.max(dt, 1);
+  if (dy > g.cell * 2.5 && vy > 0.45 && dy > Math.abs(dx) * 1.5) hardDrop();
+  else if (dy < -g.cell * 1.5 && dt < 400 && -dy > Math.abs(dx) * 1.5) holdPiece();
+  else if (!g.moved && Math.hypot(dx, dy) < 14 && dt < 320) rotate(1);
+}
+boardWrap.addEventListener('pointerup', endGesture);
+boardWrap.addEventListener('pointercancel', endGesture);
+
+/* 확대 · 스크롤 · 길게 누르기 메뉴 막기 */
+document.addEventListener('gesturestart', (e) => e.preventDefault());
+document.addEventListener('gesturechange', (e) => e.preventDefault());
+document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
+document.addEventListener(
+  'touchmove',
+  (e) => {
+    if (e.touches.length > 1 || !e.target.closest('.scrollable, .modal')) e.preventDefault();
+  },
+  { passive: false },
+);
+let lastTouchEnd = 0;
+document.addEventListener(
+  'touchend',
+  (e) => {
+    const now = Date.now();
+    if (now - lastTouchEnd < 300 && !e.target.closest('button, input, select, .opt')) e.preventDefault();
+    lastTouchEnd = now;
+  },
+  { passive: false },
+);
+document.addEventListener('contextmenu', (e) => {
+  if (!e.target.closest('input')) e.preventDefault();
+});
+// 터치스크린 노트북 등: 처음 터치하는 순간 터치 레이아웃으로 전환
+window.addEventListener(
+  'touchstart',
+  () => {
+    if (!isTouch) {
+      isTouch = true;
+      fit();
+    }
+  },
+  { passive: true },
+);
+// 앱 전환·화면 꺼짐 → 자동 일시정지
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && (G.state === 'PLAYING' || G.state === 'CLEARING')) togglePause();
+  if (!document.hidden) Sound.init();
+});
+if (window.visualViewport) window.visualViewport.addEventListener('resize', fit);
+window.addEventListener('orientationchange', () => setTimeout(fit, 250));
+
+// PC에서 Chrome이 아닐 때만 안내 (휴대폰·태블릿은 기본 브라우저로도 잘 동작)
+if (!isChrome() && !isTouch) {
+  if (/^https?:$/.test(location.protocol)) $('banner-text').textContent = '🔔 Chrome으로 열면 효과음과 중국어 음성이 가장 잘 나와요.';
+  $('browser-banner').classList.remove('hidden');
+}
 $('banner-close').addEventListener('click', () => {
   $('browser-banner').classList.add('hidden');
   fit();

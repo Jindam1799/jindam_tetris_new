@@ -2,8 +2,24 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="apple-touch-icon" href="icon/icon-192.png" />
+    <!-- 카카오톡 등 인앱 브라우저 → Chrome으로 다시 열기 (가장 먼저 실행) -->
+    <script src="inapp.js"></script>
     <title>진담중국어 테트리스</title>
+    <!-- 카카오톡 링크 미리보기 카드 -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="진담중국어 테트리스" />
+    <meta property="og:description" content="블록을 쌓다 보면 중국어 퀴즈가! 汉语方块 — 단어로 쌓고 말로 터뜨려라" />
+    <meta property="og:url" content="https://jindam1799.github.io/jindam_tetris_new/" />
+    <meta property="og:image" content="https://jindam1799.github.io/jindam_tetris_new/icon/icon-512.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta name="description" content="블록을 쌓다 보면 중국어 퀴즈가! 汉语方块 — 단어로 쌓고 말로 터뜨려라" />
+    <meta name="theme-color" content="#120a24" />
     <link rel="icon" type="image/png" href="icon/icon-192.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -18,9 +34,15 @@
       <span class="lantern l1"></span><span class="lantern l2"></span><span class="lantern l3"></span>
     </div>
 
+    <div id="safe-probe" aria-hidden="true"></div>
+    <div id="rotate-hint" class="hidden">
+      <div class="rotate-phone">📱</div>
+      <p>휴대폰을 <b>세로</b>로 돌려 주세요</p>
+    </div>
+
     <div id="browser-banner" class="hidden">
-      🔔 Chrome에서 실행해야 효과음과 중국어 음성이 가장 잘 나와요. 함께 들어 있는
-      <b>게임시작</b> 파일로 실행해 주세요.
+      <span id="banner-text">🔔 Chrome에서 실행해야 효과음과 중국어 음성이 가장 잘 나와요. 함께 들어 있는
+      <b>게임시작</b> 파일로 실행해 주세요.</span>
       <button id="banner-close" aria-label="닫기">✕</button>
     </div>
 
@@ -34,6 +56,7 @@
             <div class="brand-sub">汉语方块 · 단어로 쌓고 말로 터뜨려라</div>
           </div>
         </div>
+        <div class="top-score"><span>SCORE</span><b id="score-m">0</b></div>
         <div class="top-actions">
           <span id="mode-badge" class="mode-badge">LOBBY</span>
           <button class="icon-btn" id="btn-mute" title="음소거 (M)">🔊</button>
@@ -52,7 +75,7 @@
           </section>
 
           <section class="card">
-            <h3 class="card-title">아이템 게이지</h3>
+            <h3 class="card-title">아이템<span class="pc-only">&nbsp;게이지</span></h3>
             <div id="gauge-slots">
               <span class="slot"></span><span class="slot"></span><span class="slot"></span><span class="slot"></span><span class="slot"></span>
             </div>
@@ -114,6 +137,21 @@
         </aside>
       </main>
 
+      <!-- ===== 터치 조작 버튼 (휴대폰·태블릿) ===== -->
+      <div id="touch-controls">
+        <div class="tc-group tc-left">
+          <button class="tc-btn" data-act="left" style="grid-area: l" aria-label="왼쪽">◀</button>
+          <button class="tc-btn" data-act="down" style="grid-area: d" aria-label="아래">▼</button>
+          <button class="tc-btn" data-act="right" style="grid-area: r" aria-label="오른쪽">▶</button>
+          <button class="tc-btn tc-wide" data-act="hold" style="grid-area: h">홀드</button>
+        </div>
+        <div class="tc-group tc-right">
+          <button class="tc-btn" data-act="ccw" style="grid-area: ccw" aria-label="반대로 회전">↺</button>
+          <button class="tc-btn tc-main" data-act="cw" style="grid-area: cw" aria-label="회전">↻</button>
+          <button class="tc-btn tc-wide tc-drop" data-act="drop" style="grid-area: drop">⤓ 드롭</button>
+        </div>
+      </div>
+
       <!-- ================= 오버레이 화면들 ================= -->
 
       <!-- 인트로 -->
@@ -122,7 +160,7 @@
           <img src="icon/icon-512.png" alt="" class="intro-icon" />
           <h1 class="intro-title">진담중국어<br /><span>테트리스</span></h1>
           <p class="intro-cn">汉语方块</p>
-          <p class="blink">아무 키나 누르거나 클릭하세요</p>
+          <p class="blink" id="intro-hint">아무 키나 누르거나 클릭하세요</p>
         </div>
       </div>
 
@@ -134,18 +172,18 @@
           <div class="mode-cards">
             <button class="mode-card practice" data-mode="PRACTICE">
               <span class="mc-cn">练习</span>
-              <span class="mc-name">연습 모드</span>
-              <span class="mc-desc">느린 속도 · 방해 없음<br />퀴즈 시간 넉넉 · 오답도 OK</span>
+              <span class="mc-text"><span class="mc-name">연습 모드</span>
+              <span class="mc-desc">느린 속도 · 방해 없음<br />퀴즈 시간 넉넉 · 오답도 OK</span></span>
             </button>
             <button class="mode-card normal" data-mode="NORMAL">
               <span class="mc-cn">普通</span>
-              <span class="mc-name">노멀 모드</span>
-              <span class="mc-desc">기본 속도 · 낙석 이벤트<br />틀리면 방해 줄 +1</span>
+              <span class="mc-text"><span class="mc-name">노멀 모드</span>
+              <span class="mc-desc">기본 속도 · 낙석 이벤트<br />틀리면 방해 줄 +1</span></span>
             </button>
             <button class="mode-card hell" data-mode="HELL">
               <span class="mc-cn">地狱</span>
-              <span class="mc-name">헬 모드</span>
-              <span class="mc-desc">빠른 속도 · 특수 블록<br />좌우반전 · 지진 이벤트</span>
+              <span class="mc-text"><span class="mc-name">헬 모드</span>
+              <span class="mc-desc">빠른 속도 · 특수 블록<br />좌우반전 · 지진 이벤트</span></span>
             </button>
           </div>
           <div class="lobby-links">
@@ -229,7 +267,7 @@
           </div>
           <div id="review-box">
             <h4>📒 오답 노트 <small>단어를 누르면 발음을 들려줘요</small></h4>
-            <ul id="review-list"></ul>
+            <ul id="review-list" class="scrollable"></ul>
           </div>
           <div id="save-row">
             <input type="text" id="player-name" placeholder="닉네임 (최대 6자)" maxlength="6" autocomplete="off" />
@@ -251,7 +289,7 @@
             <button id="tab-hell">地狱 HELL</button>
           </div>
           <div class="rank-head"><span>#</span><span>닉네임</span><span>점수</span><span>레벨</span></div>
-          <ul id="rank-list"></ul>
+          <ul id="rank-list" class="scrollable"></ul>
           <button class="primary-btn" id="close-rank-btn">닫기</button>
         </div>
       </div>
