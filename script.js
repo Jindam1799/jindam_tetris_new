@@ -290,7 +290,8 @@ const BGM = (() => {
   let gain = null; // 아이폰은 audio.volume이 안 먹혀서 Web Audio로 볼륨 조절
   let fadeId = 0;
   let want = false; // 지금 음악이 나와야 하는 상태인지
-  const target = () => (settings.muted ? 0 : (settings.bgm / 100) * 0.6 * duck);
+  let trackGain = 1;
+  const target = () => (settings.muted ? 0 : Math.min(1, (settings.bgm / 100) * 0.6 * duck * trackGain));
   const setVol = (v) => {
     v = Math.max(0, Math.min(1, v));
     if (gain) gain.gain.value = v;
@@ -323,19 +324,37 @@ const BGM = (() => {
     };
     step();
   }
+  // 곡마다 조용한 앞부분 건너뛰기(초) · 작게 녹음된 곡 키우기 → 시작부터 같은 크기로 들리게
+  const TRACK_START = { normal: 3, practice: 6 };
+  const TRACK_GAIN = { normal2: 1.4, normal: 1.05, practice: 1.05 };
   function play(key) {
     if (curKey === key && key === 'lobby' && !el.paused) return;
     curKey = key;
     const list = TRACKS[key];
-    const src = 'sound/' + list[Math.floor(Math.random() * list.length)] + '.mp3';
+    const name = list[Math.floor(Math.random() * list.length)];
+    const startAt = TRACK_START[name] || 0;
     const start = () => {
-      el.src = src;
-      setVol(0);
+      fadeId++; // 진행 중이던 볼륨 변화 멈춤
+      trackGain = TRACK_GAIN[name] || 1;
+      el.src = 'sound/' + name + '.mp3' + (startAt ? '#t=' + startAt : '');
+      if (startAt) {
+        // 일부 브라우저는 #t= 를 무시하므로, 준비되면 직접 그 위치로 이동
+        const jump = () => {
+          if (el.currentTime < startAt - 0.5) {
+            try {
+              el.currentTime = startAt;
+            } catch (e) {}
+          }
+        };
+        el.addEventListener('loadedmetadata', jump, { once: true });
+        el.addEventListener('canplay', jump, { once: true });
+      }
+      setVol(target()); // 처음부터 정해진 크기로 (서서히 커지지 않음)
       want = true;
       el.play().catch(() => {});
-      fade(target(), 700);
     };
-    if (!el.paused && getVol() > 0.01) fade(0, 300, start);
+    // 다른 곡이 나오고 있으면 아주 짧게(0.15초) 줄이고 바꿈 → 뚝 끊기는 소리 방지
+    if (!el.paused && getVol() > 0.01) fade(0, 150, start);
     else start();
   }
   return {
@@ -349,7 +368,7 @@ const BGM = (() => {
     // 아이폰이 음성·알림 때문에 음악을 멈춰 버렸으면 다시 재생
     keepAlive() {
       if (want && curKey && el.paused && !document.hidden) el.play().catch(() => {});
-      if (want && curKey && !el.paused && getVol() < 0.01 && target() > 0) fade(target(), 400);
+      if (want && curKey && !el.paused && getVol() < 0.01 && target() > 0) setVol(target());
     },
     setDuck(d) {
       duck = d;
