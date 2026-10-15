@@ -534,6 +534,48 @@ function sectionWords(sec, mode = G.mode) {
 function sectionProgress(sec, mode = G.mode) {
   return sectionWords(sec, mode).filter((w) => mastery[w.no] > 0).length;
 }
+/* 스테이지 난이도 — 올라갈수록 빨라지고, 방해 블록·낙석 증가
+   노멀 40스테이지(최종) < 헬 1스테이지 가 되도록 설계 */
+function difficulty(mode, stage) {
+  if (mode === 'HELL') {
+    const t = (stage - 1) / Math.max(1, secCount('HELL') - 1);
+    return {
+      speed: Math.round(230 - 150 * t), // 230ms → 80ms
+      garbage: 5 + Math.round(4 * t), // 시작 방해 줄 5 → 9
+      sky: Math.round(9000 - 5000 * t), // 낙석 9초 → 4초마다
+      eventMs: Math.round(15000 - 6000 * t), // 좌우반전·지진 15초 → 9초마다
+      special: 0.1 + 0.12 * t, // 특수 블록 10% → 22%
+      lock: 420,
+      quizEvery: 2,
+      quizTime: Math.round(5500 - 1000 * t),
+    };
+  }
+  const t = (stage - 1) / Math.max(1, secCount('NORMAL') - 1);
+  return {
+    speed: Math.round(800 - 540 * t), // 800ms → 260ms (헬 1스테이지 230ms보다 느림)
+    garbage: Math.floor(t * 5.99), // 시작 방해 줄 0 → 5
+    sky: stage < 3 ? 0 : Math.round(26000 - 14000 * t), // 3스테이지부터 낙석 26초 → 12초
+    eventMs: 0,
+    special: 0,
+    lock: 500,
+    quizEvery: 3,
+    quizTime: Math.round(7500 - 1500 * t),
+  };
+}
+const PROGRESS_KEY = 'cikuai_hsk4_stages';
+const progress = Object.assign({ NORMAL: { unlocked: 1, best: null }, HELL: { unlocked: 1, best: null } }, loadJSON(PROGRESS_KEY, {}));
+const saveProgress = () => saveJSON(PROGRESS_KEY, progress);
+function unlockStage(mode, stage) {
+  const p = progress[mode];
+  if (stage > p.unlocked) {
+    p.unlocked = Math.min(stage, secCount(mode) + 1); // secCount+1 = 전부 클리어
+    saveProgress();
+    return true;
+  }
+  return false;
+}
+const isCleared = (mode, stage) => stage < progress[mode].unlocked;
+const continueStage = (mode) => Math.min(progress[mode].unlocked, secCount(mode));
 function markCorrect(w) {
   mastery[w.no] = (mastery[w.no] || 0) + 1;
   saveJSON(MASTER_KEY, mastery);
@@ -602,7 +644,13 @@ function resetGame(mode, section) {
     popups: [],
     trails: [],
   });
-  G.dropInterval = cfg().speed(1);
+  G.level = G.section;
+  G.startStage = G.section;
+  G.stagesCleared = 0;
+  G.allClear = false;
+  G.diff = difficulty(mode, G.section);
+  G.dropInterval = G.diff.speed;
+  G.qQueue = shuffle(sectionWords(G.section).slice());
   fillQueue();
 }
 
@@ -610,7 +658,7 @@ function newPiece(type) {
   return { type, matrix: SHAPES[type].map((r) => [...r]), rot: 0, x: 0, y: 0 };
 }
 function nextFromBag() {
-  if (G.mode === 'HELL' && Math.random() < 0.1) return newPiece(SPECIALS[Math.floor(Math.random() * SPECIALS.length)]);
+  if (G.mode === 'HELL' && Math.random() < (G.diff ? G.diff.special : 0.1)) return newPiece(SPECIALS[Math.floor(Math.random() * SPECIALS.length)]);
   if (!G.bag.length) G.bag = shuffle([1, 2, 3, 4, 5, 6, 7]);
   return newPiece(G.bag.pop());
 }
@@ -752,7 +800,7 @@ function lockPiece() {
   if (!item) {
     S.lock();
     G.placed++;
-    if (G.placed % cfg().quizEvery === 0) G.quizPending = true;
+    if (G.placed % G.diff.quizEvery === 0 && G.qQueue.length) G.quizPending = true;
   }
   resolveLines(true);
 }
@@ -811,8 +859,6 @@ function scoreLines(rows, passive) {
   G.popups.push({ text: '+' + pts.toLocaleString(), x: 200, y: cy * BS + 20, life: 900, max: 900, color: isFever() ? '#ffc94a' : '#fff' });
 
   G.lines += n;
-  G.levelLines += n;
-  if (G.levelLines >= LINES_PER_LEVEL) G.levelUpPending = true;
 
   const comboTxt = !passive && G.combo > 0 ? `${G.combo} 连击!` : '';
   buzz(n >= 4 ? [30, 40, 60] : 25);
@@ -1041,9 +1087,8 @@ function startFever() {
   const run = G.runId;
   setTimeout(() => run === G.runId && showNotice('🔥 FEVER ×2', '#ffc94a'), 900);
 }
-function generateObstacles(lvl) {
-  if (lvl < 2 || G.mode === 'PRACTICE') return;
-  const h = Math.min(8, Math.floor(lvl * 1.2));
+function generateObstacles() {
+  const h = G.diff.garbage;
   for (let y = ROWS - h; y < ROWS; y++) {
     for (let x = 0; x < COLS; x++) if (Math.random() < 0.38) G.board[y][x] = 9;
     if (G.board[y].every((v) => v)) G.board[y][Math.floor(Math.random() * COLS)] = 0;
@@ -1095,7 +1140,7 @@ function startQuiz() {
     say = q.cn;
   }
 
-  G.quiz = { q, pr, say, type, options, correct, start: performance.now(), dur: cfg().quizTime, answered: false, lastTick: 99 };
+  G.quiz = { q, pr, say, type, options, correct, start: performance.now(), dur: G.diff.quizTime, answered: false, lastTick: 99 };
 
   $('quiz-type').textContent = QUIZ_TYPES[type];
   $('quiz-streak').textContent = G.streak > 0 ? `连对 ×${G.streak}` : '';
@@ -1149,8 +1194,8 @@ function startQuiz() {
   if (type === 'cn2kr' || type === 'listen') setTimeout(() => G.state === 'QUIZ' && TTS.speak(say), 300);
 }
 function pickQuizWord() {
-  // 고른 구간 단어를 한 바퀴씩, 틀린 단어는 2문제 뒤에 다시
-  if (!G.qQueue.length) G.qQueue = shuffle(sectionWords(G.section).slice());
+  // 이 스테이지에서 아직 못 맞힌 단어만 출제 (틀리면 2문제 뒤에 다시)
+  if (!G.qQueue.length) return sectionWords(G.section)[Math.floor(Math.random() * sectionWords(G.section).length)];
   return G.qQueue.shift();
 }
 function updateQuiz(now) {
@@ -1189,15 +1234,7 @@ function answerQuiz(i) {
     G.lvQuizRight++;
     G.streak++;
     markCorrect(z.q);
-    if (!G.sectionDone && sectionProgress(G.section) >= sectionWords(G.section).length) {
-      G.sectionDone = true;
-      const run = G.runId;
-      setTimeout(() => {
-        if (run !== G.runId) return;
-        S.levelUp();
-        showAction('完成!', `${G.section}구간 ${sectionWords(G.section).length}단어 모두 맞혔어요`, '#ffc94a');
-      }, 1300);
-    }
+    if (!G.qQueue.length && !G.levelUpPending) G.levelUpPending = true; // 스테이지 단어 전부 정답 → 클리어
     const frac = Math.max(0, 1 - (performance.now() - z.start) / z.dur);
     let pts = Math.round((50 + 150 * frac) * G.level);
     if (isFever()) pts *= 2;
@@ -1227,7 +1264,7 @@ function answerQuiz(i) {
       hideOverlay('quiz-ui');
       BGM.setDuck(1);
       if (!ok && !practice) addPenaltyLine();
-      if (G.state !== 'GAME_OVER') spawnNext();
+      if (G.state !== 'GAME_OVER') finishTurn();
     },
     ok ? 950 : practice ? 2400 : 1600,
   );
@@ -1334,7 +1371,7 @@ function render(now) {
 
   // 현재 블록
   if (p && (playing || G.state === 'PAUSED')) {
-    const lockFade = collide(p, 0, 1) ? 1 - 0.35 * (G.lockAcc / cfg().lock) : 1;
+    const lockFade = collide(p, 0, 1) ? 1 - 0.35 * (G.lockAcc / G.diff.lock) : 1;
     eachCell(p, (x, y, v) => {
       if (y >= 0) drawCell(ctx, v, x * BS, y * BS, BS, isItem(v) ? pulse : lockFade);
     });
@@ -1461,8 +1498,9 @@ function updateHUD() {
   $('score').textContent = (G.score || 0).toLocaleString();
   $('score-m').textContent = $('score').textContent;
   $('level').textContent = G.level;
-  $('lines-left').textContent = Math.max(0, LINES_PER_LEVEL - G.levelLines);
-  $('level-fill').style.width = Math.min(100, (G.levelLines / LINES_PER_LEVEL) * 100) + '%';
+  const total = sectionWords(G.section).length;
+  $('lines-left').textContent = G.qQueue ? G.qQueue.length : total;
+  $('level-fill').style.width = (((total - (G.qQueue ? G.qQueue.length : total)) / total) * 100).toFixed(1) + '%';
   document.querySelectorAll('#gauge-slots .slot').forEach((s, i) => s.classList.toggle('filled', i < G.gauge));
   $('streak-num').textContent = G.streak;
   $('combo').textContent = Math.max(0, G.combo);
@@ -1479,7 +1517,7 @@ function updateHUD() {
   const chips = [];
   if (G.reversedUntil > G.clock) chips.push(`<span class="chip" style="color:#ff4d5e">⇄ 좌우반전 ${Math.ceil((G.reversedUntil - G.clock) / 1000)}</span>`);
   if (fever) chips.push(`<span class="chip" style="color:#ffc94a">🔥 FEVER ×2</span>`);
-  if (G.section) chips.push(`<span class="chip" style="color:${G.mode === 'HELL' ? '#ff9a2e' : '#2de0a7'}">📘 ${G.section}구간 ${sectionProgress(G.section)}/${sectionWords(G.section).length}</span>`);
+  if (G.section) chips.push(`<span class="chip" style="color:${G.mode === 'HELL' ? '#ff9a2e' : '#2de0a7'}">📘 STAGE ${G.section} · ${sectionWords(G.section).length - G.qQueue.length}/${sectionWords(G.section).length}</span>`);
   const html = chips.join('');
   const box = $('status-chips');
   if (box.innerHTML !== html) box.innerHTML = html;
@@ -1522,18 +1560,16 @@ let hudT = 0;
 
 function updatePlaying(dt) {
   G.clock += dt;
-  const c = cfg();
-  if (c.sky) {
+  if (G.diff.sky) {
     G.skyTimer += dt;
-    const interval = Math.max(G.mode === 'HELL' ? 3500 : 8000, c.sky - (G.level - 1) * 1500);
-    if (G.skyTimer > interval) {
+    if (G.skyTimer > G.diff.sky) {
       G.skyTimer = 0;
       spawnSky();
     }
   }
-  if (G.mode === 'HELL') {
+  if (G.diff.eventMs) {
     G.eventTimer += dt;
-    if (G.eventTimer > 15000) {
+    if (G.eventTimer > G.diff.eventMs) {
       G.eventTimer = 0;
       randomEvent();
     }
@@ -1576,7 +1612,7 @@ function updatePlaying(dt) {
   } else {
     G.dropAcc = 0;
     G.lockAcc += dt;
-    if (G.lockAcc >= cfg().lock) lockPiece();
+    if (G.lockAcc >= G.diff.lock) lockPiece();
   }
 }
 function loop(now) {
@@ -1628,6 +1664,7 @@ document.addEventListener('keydown', (e) => {
   // 설정 / 방법 / 랭킹 창 닫기
   if (anyOpen('section-ui')) {
     if (code === 'Escape') $('btn-section-back').click();
+    if (code === 'Enter') $('btn-map-continue').click();
     return;
   }
   for (const id of ['settings-ui', 'howto-ui', 'ranking-ui']) {
@@ -1639,7 +1676,7 @@ document.addEventListener('keydown', (e) => {
 
   if (G.state === 'IDLE' && anyOpen('lobby-ui')) {
     const m = { Digit1: 'NORMAL', Digit2: 'HELL' }[code];
-    if (m) startGame(m);
+    if (m) startGame(m, continueStage(m));
     return;
   }
   if (G.state === 'QUIZ') {
@@ -1727,7 +1764,7 @@ function hideAll() {
 }
 function setModeLook(mode) {
   document.body.dataset.mode = mode;
-  $('mode-badge').textContent = mode === 'LOBBY' ? 'LOBBY' : `${MODE_CFG[mode].label.split(' ')[0]} ${G.section}구간`;
+  $('mode-badge').textContent = mode === 'LOBBY' ? 'LOBBY' : `${MODE_CFG[mode].label.split(' ')[0]} STAGE ${G.section}`;
 }
 
 function closeIntro() {
@@ -1750,15 +1787,18 @@ function showLobby() {
   boardWrap.className = '';
   $('status-chips').innerHTML = '';
   $('countdown').classList.add('hidden');
+  renderLobby();
   showOverlay('lobby-ui');
   BGM.setDuck(1);
   BGM.play('lobby');
 }
 function startGame(mode, section) {
   if (!section) return openSections(mode);
+  if (section > continueStage(mode)) return; // 잠긴 스테이지
   if (document.activeElement) document.activeElement.blur();
   hideAll();
   resetGame(mode, section);
+  generateObstacles();
   setModeLook(mode);
   boardWrap.className = '';
   updateHUD();
@@ -1807,22 +1847,42 @@ function togglePause() {
 function showLevelClear() {
   G.state = 'LEVEL_CLEAR';
   G.sky = [];
+  G.stagesCleared++;
+  const total = secCount(G.mode);
+  const last = G.level >= total;
+  const newly = unlockStage(G.mode, G.level + 1);
   S.levelUp();
-  TTS.speak('过关！', 1);
+  TTS.speak(last ? '全部通关！' : '过关！', 1);
   const sec = Math.floor((performance.now() - G.levelStart) / 1000);
   $('clear-level').textContent = G.level;
   $('level-time').textContent = `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
   $('level-combo').textContent = G.maxCombo;
   $('level-score').textContent = (G.score - G.levelScoreStart).toLocaleString();
   $('level-quiz').textContent = `${G.lvQuizRight}/${G.lvQuizTotal}`;
+  $('clear-big').textContent = last ? '全部通关!' : '过关!';
+  $('unlock-msg').textContent = last
+    ? `🏆 ${G.mode === 'HELL' ? '헬' : '노멀'} 모드 모든 스테이지 클리어!`
+    : `${newly ? '🔓 새로 열림' : '▶ 다음'} · STAGE ${G.level + 1} (${pad4(sectionWords(G.level + 1)[0].no)}–${pad4(sectionWords(G.level + 1).slice(-1)[0].no)})`;
+  $('next-level-btn').innerHTML = last ? '🏆 기록 남기기' : `STAGE ${G.level + 1} 시작 <kbd>Enter</kbd>`;
   const run = G.runId;
   setTimeout(() => run === G.runId && showOverlay('level-clear-ui'), 700);
 }
 function nextLevel() {
   if (G.state !== 'LEVEL_CLEAR') return;
   hideOverlay('level-clear-ui');
+  if (G.level >= secCount(G.mode)) {
+    G.allClear = true;
+    G.board = createBoard();
+    G.state = 'PLAYING';
+    return gameOver();
+  }
   G.level++;
-  G.levelLines = 0;
+  G.section = G.level;
+  G.diff = difficulty(G.mode, G.level);
+  G.qQueue = shuffle(sectionWords(G.section).slice());
+  G.levelUpPending = false;
+  G.quizPending = false;
+  G.placed = 0;
   G.maxCombo = 0;
   G.combo = -1;
   G.lvQuizRight = G.lvQuizTotal = 0;
@@ -1832,8 +1892,9 @@ function nextLevel() {
   G.eventTimer = 0;
   G.skyTimer = 0;
   G.board = createBoard();
-  generateObstacles(G.level);
-  G.dropInterval = cfg().speed(G.level);
+  generateObstacles();
+  G.dropInterval = G.diff.speed;
+  setModeLook(G.mode);
   updateHUD();
   BGM.play(G.mode);
   countdown(() => spawnNext());
@@ -1846,9 +1907,19 @@ function gameOver() {
   G.sky = [];
   hideOverlay('quiz-ui');
   BGM.setDuck(1);
-  S.over();
-  BGM.play('over');
-  boardFx('shake-l');
+  if (G.allClear) {
+    S.allClear();
+    BGM.play('lobby');
+  } else {
+    S.over();
+    BGM.play('over');
+    boardFx('shake-l');
+  }
+  $('over-title').textContent = G.allClear ? '全部通关' : '游戏结束';
+  $('over-title').classList.toggle('red', !G.allClear);
+  $('over-sub').textContent =
+    `STAGE ${G.startStage}에서 시작 → STAGE ${G.level} 도달 · ${G.stagesCleared}개 클리어` +
+    (G.allClear ? '' : ` · 이어하기: STAGE ${continueStage(G.mode)}`);
   $('final-score').textContent = G.score.toLocaleString();
   $('final-level').textContent = G.level;
   $('final-lines').textContent = G.lines;
@@ -1879,7 +1950,12 @@ function gameOver() {
     li.addEventListener('click', () => TTS.speak(q.cn));
     list.appendChild(li);
   });
-  const canRank = G.mode !== 'PRACTICE';
+  const canRank = true;
+  const best = progress[G.mode].best;
+  if (!best || G.level > best.stage || (G.level === best.stage && G.score > best.score)) {
+    progress[G.mode].best = { stage: G.level, score: G.score, clear: G.allClear };
+    saveProgress();
+  }
   $('save-row').classList.toggle('hidden', !canRank);
   $('player-name').value = loadJSON('cntetris_lastname', '');
   const run = G.runId;
@@ -1890,50 +1966,51 @@ function gameOver() {
   }, 1000);
 }
 
-/* ---------------- 구간 선택 (노멀 25단어 · 헬 100단어) ---------------- */
-const words0 = (mode) => secSize(mode);
+/* ---------------- 스테이지 맵 (노멀 25단어×40 · 헬 100단어×10) ---------------- */
+let mapMode = 'NORMAL';
 function openSections(mode = 'NORMAL') {
+  mapMode = mode;
   hideAll();
   const grid = $('section-grid');
   grid.innerHTML = '';
   grid.dataset.mode = mode;
-  $('section-title').textContent = (mode === 'HELL' ? '🔥 헬 모드' : '노멀 모드') + ' 구간 선택';
-  let rec = 0, doneCount = 0, mastered = 0;
   const total = secCount(mode);
-  for (let sec = 1; sec <= total; sec++) {
-    const words = sectionWords(sec, mode);
-    const prog = sectionProgress(sec, mode);
-    mastered += prog;
-    const done = prog >= words.length;
-    if (done) doneCount++;
-    else if (!rec) rec = sec;
+  const cur = continueStage(mode);
+  $('section-title').textContent = (mode === 'HELL' ? '🔥 헬 모드' : '노멀 모드') + ' 스테이지';
+  $('section-summary').textContent = `스테이지마다 ${secSize(mode)}단어 · 클리어 ${Math.min(progress[mode].unlocked - 1, total)}/${total}`;
+  for (let st = 1; st <= total; st++) {
+    const words = sectionWords(st, mode);
+    const cleared = isCleared(mode, st);
+    const locked = st > cur;
     const b = document.createElement('button');
-    b.className = 'sec-tile' + (done ? ' done' : prog ? ' partial' : '');
-    b.style.setProperty('--p', (prog / words.length).toFixed(3));
+    b.className = 'sec-tile' + (cleared ? ' done' : locked ? ' locked' : ' rec');
     b.innerHTML =
-      `<span class="sec-no">${done ? '★' : sec}</span>` +
-      `<span class="sec-range">${pad4(words[0].no)}–${pad4(words[words.length - 1].no)}</span>` +
+      `<span class="sec-no">${locked ? '🔒' : cleared ? '★' : st}</span>` +
+      `<span class="sec-range">STAGE ${st}</span>` +
       `<span class="sec-cn"></span><span class="sec-bar"><i></i></span>`;
-    b.querySelector('.sec-cn').textContent = `${words[0].cn} … ${words[words.length - 1].cn}`;
-    b.title = `${sec}구간 · ${prog}/${words.length} 맞힘`;
-    b.addEventListener('click', () => startGame(mode, sec));
-    b.dataset.sec = sec;
+    b.querySelector('.sec-cn').textContent = locked ? `${pad4(words[0].no)}–${pad4(words[words.length - 1].no)}` : `${words[0].cn} … ${words[words.length - 1].cn}`;
+    b.style.setProperty('--p', cleared ? 1 : 0);
+    b.disabled = locked;
+    b.dataset.sec = st;
+    if (!locked) b.addEventListener('click', () => startGame(mode, st));
     grid.appendChild(b);
   }
-  const recTile = grid.querySelector(`[data-sec="${rec || 1}"]`);
-  if (recTile) recTile.classList.add('rec');
-  $('section-summary').textContent = `${words0(mode)}단어씩 ${total}구간 · 완료 ${doneCount}/${total} · 맞힌 단어 ${mastered}/${VOCAB_LIST.length}`;
+  $('btn-map-continue').innerHTML = `▶ STAGE ${cur} ${cur > 1 ? '이어하기' : '시작'}`;
   setModeLook('LOBBY');
   showOverlay('section-ui');
-  if (recTile) recTile.scrollIntoView({ block: 'nearest' });
+  const curTile = grid.querySelector(`[data-sec="${cur}"]`);
+  if (curTile) curTile.scrollIntoView({ block: 'nearest' });
 }
+$('btn-map-continue').addEventListener('click', () => startGame(mapMode, continueStage(mapMode)));
 $('btn-section-back').addEventListener('click', () => {
   hideOverlay('section-ui');
+  renderLobby();
   showOverlay('lobby-ui');
 });
 
 /* ---------------- 랭킹 ---------------- */
-const rankKey = (m) => `tetris_rank_${m}`;
+const rankKey = (m) => `cikuai_hsk4_rank_${m}`;
+const rankSort = (a, b) => b.stage - a.stage || b.score - a.score;
 function getRankings(mode) {
   const r = loadJSON(rankKey(mode), []);
   return Array.isArray(r) ? r : [];
@@ -1957,8 +2034,8 @@ function renderRankings(mode, highlight = -1) {
     [
       ['rk', i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1],
       ['nm', r.name],
+      ['lv', (r.clear ? '🏆 ' : '') + 'STAGE ' + r.stage],
       ['sc', Number(r.score).toLocaleString()],
-      ['lv', 'Lv.' + r.level],
     ].forEach(([cls, txt]) => {
       const s = document.createElement('span');
       s.className = cls;
@@ -1972,9 +2049,9 @@ $('save-rank-btn').addEventListener('click', () => {
   const name = $('player-name').value.trim().slice(0, 6) || '무명';
   saveJSON('cntetris_lastname', name);
   const ranks = getRankings(G.mode);
-  const rec = { name, score: G.score, level: G.level, date: new Date().toLocaleDateString(), t: Date.now() };
+  const rec = { name, score: G.score, stage: G.level, clear: G.allClear, cleared: G.stagesCleared, date: new Date().toLocaleDateString(), t: Date.now() };
   ranks.push(rec);
-  ranks.sort((a, b) => b.score - a.score);
+  ranks.sort(rankSort);
   const top = ranks.slice(0, 10);
   saveJSON(rankKey(G.mode), top);
   $('save-row').classList.add('hidden');
@@ -2076,7 +2153,24 @@ function toggleMute() {
 }
 
 /* ---------------- 버튼 연결 ---------------- */
-document.querySelectorAll('.mode-card').forEach((b) => b.addEventListener('click', () => startGame(b.dataset.mode)));
+document.querySelectorAll('.mode-card').forEach((card) => {
+  const mode = card.dataset.mode;
+  card.querySelector('.mc-play').addEventListener('click', () => startGame(mode, continueStage(mode)));
+  card.querySelector('.mc-map').addEventListener('click', () => openSections(mode));
+});
+function renderLobby() {
+  document.querySelectorAll('.mode-card').forEach((card) => {
+    const mode = card.dataset.mode;
+    const total = secCount(mode);
+    const cleared = Math.min(progress[mode].unlocked - 1, total);
+    const cur = continueStage(mode);
+    card.querySelector('.mc-unlocked').textContent = `${cleared} / ${total}`;
+    card.querySelector('.mc-bar i').style.width = (cleared / total) * 100 + '%';
+    const best = progress[mode].best;
+    card.querySelector('.mc-best').textContent = best ? `최고 기록 · STAGE ${best.stage}${best.clear ? ' 🏆' : ''} · ${Number(best.score).toLocaleString()}점` : '최고 기록 · 아직 없음';
+    card.querySelector('.mc-play').innerHTML = cleared >= total ? `▶ STAGE ${cur} 다시 도전` : `▶ STAGE ${cur} ${cur > 1 ? '이어하기' : '시작'}`;
+  });
+}
 document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => hideOverlay(b.dataset.close)));
 $('btn-open-howto').addEventListener('click', () => showOverlay('howto-ui'));
 $('btn-open-settings').addEventListener('click', openSettings);

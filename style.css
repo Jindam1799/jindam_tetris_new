@@ -1636,3 +1636,176 @@ body.portrait .section-modal .modal-sub {
 #section-grid[data-mode='HELL'] .sec-bar i {
   background: #ff6b3d;
 }
+
+/* =========================================================
+   로비 (2개 모드) · 스테이지 맵
+   ========================================================= */
+.mode-cards.two {
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.mode-cards.two .mode-card {
+  align-items: stretch;
+  gap: 14px;
+  padding: 20px 18px 18px;
+  text-align: left;
+  cursor: default;
+  background:
+    radial-gradient(circle at 85% 0%, color-mix(in srgb, var(--c) 28%, transparent), transparent 60%),
+    linear-gradient(180deg, color-mix(in srgb, var(--c) 14%, transparent), rgba(0, 0, 0, 0.3));
+}
+.mode-cards.two .mode-card:hover {
+  transform: none;
+  box-shadow: 0 14px 36px color-mix(in srgb, var(--c) 30%, transparent);
+}
+.mc-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.mode-cards.two .mc-cn {
+  font-size: 50px;
+}
+.mode-cards.two .mc-text {
+  align-items: flex-start;
+  gap: 2px;
+}
+.mode-cards.two .mc-name {
+  font-size: 24px;
+}
+.mode-cards.two .mc-desc {
+  font-family: var(--font-num);
+  font-size: 13px;
+  color: var(--c);
+  font-weight: 700;
+}
+.mc-progress {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.mc-prog-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 12px;
+  color: var(--muted);
+}
+.mc-prog-row b {
+  font-family: var(--font-num);
+  font-size: 18px;
+  color: var(--ink);
+}
+.mc-bar {
+  height: 8px;
+  margin: 6px 0 8px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.mc-bar i {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 99px;
+  background: var(--c);
+  box-shadow: 0 0 10px var(--c);
+}
+.mc-best {
+  font-size: 12px;
+  color: #d8d0ea;
+}
+.mc-rules {
+  margin: 0;
+  padding: 0 0 0 16px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.mc-play {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 14px;
+  font-size: 18px;
+  font-weight: 900;
+  color: #0b0918;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 70%, #fff), var(--c));
+  box-shadow: 0 5px 0 color-mix(in srgb, var(--c) 55%, #000), 0 8px 22px color-mix(in srgb, var(--c) 35%, transparent);
+  transition: 0.1s;
+}
+.mc-play:active {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--c) 55%, #000);
+}
+.mc-map {
+  margin-top: -6px;
+  padding: 9px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+.mc-map:hover {
+  background: color-mix(in srgb, var(--c) 14%, transparent);
+}
+body.portrait .mode-cards.two {
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+body.portrait .mode-cards.two .mode-card {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 16px;
+}
+body.portrait .mode-cards.two .mc-top,
+body.portrait .mode-cards.two .mc-progress {
+  grid-column: 1 / -1;
+}
+body.portrait .mc-rules {
+  display: none;
+}
+body.portrait .mc-map {
+  margin-top: 0;
+}
+body.portrait .mode-cards.two .mc-cn {
+  width: auto;
+  font-size: 44px;
+}
+
+/* 스테이지 맵 */
+.sec-tile.locked {
+  opacity: 0.38;
+  cursor: not-allowed;
+  filter: grayscale(0.6);
+}
+.sec-tile.locked:hover {
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+.sec-tile.locked .sec-no {
+  font-size: 18px;
+}
+#btn-map-continue {
+  margin-top: 14px;
+}
+.unlock-msg {
+  margin: 4px 0 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #2de0a7;
+}
+.rank-head,
+#rank-list li {
+  grid-template-columns: 40px 1fr 104px 92px;
+}
+#rank-list .lv {
+  text-align: left;
+  font-size: 13px;
+}
+.rank-head span:nth-child(4) {
+  text-align: right;
+}
