@@ -1598,3 +1598,20 @@ body.portrait .section-modal .modal-sub {
   font-size: 30px;
   letter-spacing: 4px;
 }
+.soft-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.soft-wrap input[type='range'] {
+  width: 130px;
+}
+.soft-wrap small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.soft-wrap b {
+  font-family: var(--font-num);
+  width: 18px;
+  text-align: right;
+}

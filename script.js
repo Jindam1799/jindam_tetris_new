@@ -32,7 +32,7 @@ function saveJSON(key, val) {
 }
 const SETTINGS_KEY = 'cntetris_settings_v2';
 const settings = Object.assign(
-  { bgm: 45, sfx: 75, tts: true, rate: 85, voice: '', ghost: true, muted: false },
+  { bgm: 45, sfx: 75, tts: true, rate: 85, voice: '', ghost: true, muted: false, soft: 5 },
   loadJSON(SETTINGS_KEY, {}),
 );
 const saveSettings = () => saveJSON(SETTINGS_KEY, settings);
@@ -508,7 +508,10 @@ const MODE_CFG = {
   HELL: { speed: (l) => Math.max(55, 380 * Math.pow(0.86, l - 1)), lock: 420, quizEvery: 5, quizTime: 5500, sky: 9000, label: '地狱 HELL' },
 };
 const CLEAR_MS = 320;
-const SOFT_MS = 32;
+const SOFT_MS = 40; // 키보드 ↓ 소프트드롭 속도
+// 모바일 ▼ 버튼: 탭 = 한 칸, 꾹 누르면 잠깐 뒤 연속 하강 (속도는 설정에서 1~10단계)
+const TOUCH_SOFT_DELAY = 170;
+const touchSoftMs = () => Math.round(190 - (settings.soft || 5) * 15); // 1단계 175ms … 5단계 115ms … 10단계 40ms
 const DAS = 150;
 const ARR = 38;
 const FEVER_MS = 15000;
@@ -1053,6 +1056,7 @@ const QUIZ_TYPES = {
 function startQuiz() {
   G.state = 'QUIZ';
   G.softDrop = false;
+  G.touchSoft = false;
   BGM.setDuck(0.3);
   const q = pickQuizWord();
   const practice = G.mode === 'PRACTICE';
@@ -1553,7 +1557,10 @@ function updatePlaying(dt) {
     }
   }
   const p = G.piece;
-  const interval = G.softDrop ? Math.min(SOFT_MS, G.dropInterval) : G.dropInterval;
+  if (G.touchSoft) G.touchSoftT += dt;
+  const touchSoftOn = G.touchSoft && G.touchSoftT >= TOUCH_SOFT_DELAY;
+  const softOn = G.softDrop || touchSoftOn;
+  const interval = G.softDrop ? Math.min(SOFT_MS, G.dropInterval) : touchSoftOn ? Math.min(touchSoftMs(), G.dropInterval) : G.dropInterval;
   if (!collide(p, 0, 1)) {
     G.lockAcc = 0;
     G.dropAcc += dt;
@@ -1561,7 +1568,7 @@ function updatePlaying(dt) {
       G.dropAcc -= interval;
       if (collide(p, 0, 1)) break;
       p.y++;
-      if (G.softDrop) {
+      if (softOn) {
         addScore(1, true);
         S.soft();
       }
@@ -1997,7 +2004,7 @@ function fillVoiceSelect() {
   const note = $('voice-note');
   const v = TTS.voice;
   if (!v) {
-    note.textContent = '이 컴퓨터에서 중국어 음성을 찾지 못했어요. Chrome에서 실행하고 인터넷에 연결되어 있는지 확인해 주세요. (듣기 문제는 자동으로 빠져요)';
+    note.textContent = '이 기기에서 중국어 음성을 찾지 못했어요. Chrome(아이폰은 Safari도 OK)에서 열고 인터넷 연결을 확인해 주세요. (듣기 문제는 자동으로 빠져요)';
   } else if (/ting/i.test(v.name)) {
     note.textContent = `✅ 지금 음성: ${v.name}`;
   } else {
@@ -2011,6 +2018,8 @@ function openSettings() {
   $('set-tts').checked = settings.tts;
   $('set-rate').value = settings.rate;
   $('set-ghost').checked = settings.ghost;
+  $('set-soft').value = settings.soft || 5;
+  $('soft-val').textContent = settings.soft || 5;
   TTS.choose();
   fillVoiceSelect();
   showOverlay('settings-ui');
@@ -2035,6 +2044,11 @@ $('set-rate').addEventListener('input', (e) => {
   saveSettings();
 });
 $('set-rate').addEventListener('change', () => TTS.speak('你好，我们一起学中文吧！'));
+$('set-soft').addEventListener('input', (e) => {
+  settings.soft = +e.target.value;
+  $('soft-val').textContent = settings.soft;
+  saveSettings();
+});
 $('set-ghost').addEventListener('change', (e) => {
   settings.ghost = e.target.checked;
   saveSettings();
@@ -2168,10 +2182,18 @@ const TOUCH_ACTS = {
   right: { down: () => pressMove(1), up: () => releaseMove(1) },
   down: {
     down: () => {
-      G.softDrop = true;
-      G.dropAcc = Math.max(G.dropAcc || 0, SOFT_MS);
+      G.touchSoft = true;
+      G.touchSoftT = 0;
+      // 탭하면 딱 한 칸
+      const p = G.piece;
+      if (canPlay() && p && !collide(p, 0, 1)) {
+        p.y++;
+        G.dropAcc = 0;
+        addScore(1, true);
+        S.soft();
+      }
     },
-    up: () => (G.softDrop = false),
+    up: () => (G.touchSoft = false),
   },
   cw: { down: () => canPlay() && rotate(1) },
   ccw: { down: () => canPlay() && rotate(-1) },
