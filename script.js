@@ -2083,6 +2083,9 @@ function gameOver() {
     saveProgress();
   }
   $('save-row').classList.toggle('hidden', !canRank);
+  const total = rivalBoard(G.mode).length + getRankings(G.mode).length + 1;
+  $('rank-preview').textContent = `이 기록이면 명예의 전당 ${total}명 중 ${rankOf(G.mode, G.level, G.score)}등이에요! 닉네임을 남겨 보세요.`;
+  $('rank-preview').classList.remove('hidden');
   $('player-name').value = loadJSON('cntetris_lastname', '');
   const run = G.runId;
   setTimeout(() => {
@@ -2141,36 +2144,117 @@ function getRankings(mode) {
   const r = loadJSON(rankKey(mode), []);
   return Array.isArray(r) ? r : [];
 }
-function renderRankings(mode, highlight = -1) {
+/* ---- 함께 경쟁하는 친구들 (라이벌 기록) ----
+   날짜를 기준으로 정해진 규칙으로 만들어서, 어느 기기에서 보든 같은 친구들이 보이고
+   날이 지날수록 몇몇 친구들의 스테이지와 점수가 조금씩 올라가요. */
+const RIVAL_NAMES = [
+  '하늘별', '민준이', '서윤짱', '지우', '하린', '도윤07', '예준짱', '수아', '시우사랑', '라온',
+  '도담이', '단비', '별빛', '니하오', '만두왕', '탕후루', '판다곰', '하늘구름', '꼬마용', '토끼발',
+  '감자칩', '귤귤이', '새싹', '해바라기', '블록장인', '한자박사', '중국어왕', '민서33', '윤우', 'jiwoo',
+  'Luna', '다온', '이안', '소율', '은우짱', '지아', '채원', '유나', '하람', '준우',
+  '건우', '연우', '서진', '나은', '초록별', '딸기우유', '콩콩이', '멍뭉이', '젤리곰', '무지개',
+  '반짝이', '꿀벌', '다람쥐', '펭귄', '라면왕', '딤섬', '바오바오', '씽씽이', '쑥쑥이', '하하호호',
+];
+const RIVAL_START = Date.UTC(2026, 9, 1); // 2026-10-01
+function seeded(a) {
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+// 스테이지까지 왔을 때 대략적인 점수 (실제 플레이 점수와 비슷한 크기)
+const scoreFor = (mode, st) => (mode === 'HELL' ? 15000 : 4500) * ((st * (st + 1)) / 2);
+function rivalBoard(mode) {
+  const now = Date.now();
+  const day = Math.floor((now - RIVAL_START) / 86400000);
+  const rnd = seeded(mode === 'HELL' ? 7771 : 4242);
+  const n = mode === 'HELL' ? 24 : 40;
+  const max = secCount(mode);
+  const list = [];
+  for (let i = 0; i < n; i++) {
+    const name = RIVAL_NAMES[(i * 7 + (mode === 'HELL' ? 13 : 0)) % RIVAL_NAMES.length];
+    const skill = Math.pow(rnd(), 1.7); // 대부분은 비슷한 실력, 몇 명만 아주 잘함
+    const joined = Math.floor(rnd() * 24) - 18; // 시작한 날
+    const pace = (1.5 + rnd() * 5) * (mode === 'HELL' ? 3 : 1); // 며칠마다 스테이지가 오르는지
+    const active = rnd() < 0.65;
+    const cap = mode === 'HELL' ? 1 + Math.floor(skill * 3.6) : 3 + Math.floor(skill * 21);
+    const newbie = rnd() < 0.22; // 막 시작한 친구들 (아직 STAGE 1)
+    const days = Math.max(0, day - joined);
+    const grown = active ? Math.floor(days / pace) : Math.floor(Math.min(days, 6) / pace);
+    const stage = newbie ? 1 : Math.max(1, Math.min(max, cap, 1 + Math.floor(skill * cap * 0.4) + grown));
+    const score = Math.round((scoreFor(mode, stage) * (newbie ? 0.25 + rnd() * 0.7 : 0.72 + rnd() * 0.5)) / 10) * 10;
+    const hourOffset = rnd() * 23;
+    const lastDay = active ? day - (rnd() < 0.55 ? 0 : 1) : day - 2 - Math.floor(rnd() * 8);
+    let ts = RIVAL_START + lastDay * 86400000 + hourOffset * 3600000;
+    if (ts > now) ts = now - (1 + i * 7) * 60000; // 오늘 아직 안 온 시간이면 방금 전쪽으로
+    list.push({ name, stage, score, clear: stage >= max && skill > 0.9, t: ts, rival: true });
+  }
+  return list;
+}
+function timeAgo(t) {
+  const m = Math.max(0, Math.floor((Date.now() - t) / 60000));
+  if (m < 5) return '방금 전';
+  if (m < 60) return `${m}분 전`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}시간 전`;
+  const d = Math.floor(h / 24);
+  return d === 1 ? '어제' : `${d}일 전`;
+}
+function fullBoard(mode) {
+  const mine = getRankings(mode).map((r) => Object.assign({}, r, { mine: true, stage: r.stage || r.level || 1 }));
+  return rivalBoard(mode).concat(mine).sort(rankSort);
+}
+function rankOf(mode, stage, score) {
+  return fullBoard(mode).filter((r) => r.stage > stage || (r.stage === stage && r.score > score)).length + 1;
+}
+function renderRankings(mode, highlightT = 0) {
   $('tab-normal').classList.toggle('active', mode === 'NORMAL');
   $('tab-hell').classList.toggle('active', mode === 'HELL');
   const list = $('rank-list');
   list.innerHTML = '';
-  const ranks = getRankings(mode);
-  if (!ranks.length) {
+  const board = fullBoard(mode);
+  let hiRow = null;
+  board.forEach((r, i) => {
     const li = document.createElement('li');
-    li.className = 'empty';
-    li.textContent = '아직 기록이 없어요. 첫 번째 주인공이 되어 보세요!';
-    list.appendChild(li);
-    return;
-  }
-  ranks.forEach((r, i) => {
-    const li = document.createElement('li');
-    if (i === highlight) li.className = 'me';
-    [
-      ['rk', i + 1],
-      ['nm', r.name],
-      ['lv', 'STAGE ' + r.stage, r.clear],
-      ['sc', Number(r.score).toLocaleString()],
-    ].forEach(([cls, txt, star]) => {
-      const s = document.createElement('span');
-      s.className = cls;
-      if (star) s.innerHTML = icon('star');
-      s.append(txt);
-      li.appendChild(s);
-    });
+    if (r.mine) li.classList.add('mine');
+    if (highlightT && r.t === highlightT) {
+      li.classList.add('me');
+      hiRow = li;
+    }
+    const rk = document.createElement('span');
+    rk.className = 'rk';
+    rk.textContent = i + 1;
+    const nm = document.createElement('span');
+    nm.className = 'nm';
+    const nmText = document.createElement('b');
+    nmText.textContent = r.name;
+    nm.appendChild(nmText);
+    if (r.mine) {
+      const tag = document.createElement('i');
+      tag.className = 'me-tag';
+      tag.textContent = '나';
+      nm.appendChild(tag);
+    }
+    const ago = document.createElement('small');
+    ago.textContent = timeAgo(r.t || Date.now());
+    nm.appendChild(ago);
+    const lv = document.createElement('span');
+    lv.className = 'lv';
+    if (r.clear) lv.innerHTML = icon('star');
+    lv.append('STAGE ' + r.stage);
+    const sc = document.createElement('span');
+    sc.className = 'sc';
+    sc.textContent = Number(r.score).toLocaleString();
+    li.append(rk, nm, lv, sc);
     list.appendChild(li);
   });
+  const myIdx = board.findIndex((r) => highlightT && r.t === highlightT);
+  $('rank-summary').textContent =
+    myIdx >= 0 ? `${board.length}명 중에 ${myIdx + 1}등이에요!` : `지금 ${board.length}명이 ${mode === 'HELL' ? '헬' : '노멀'} 모드에 도전하고 있어요`;
+  if (hiRow) setTimeout(() => hiRow.scrollIntoView({ block: 'center' }), 50);
 }
 $('save-rank-btn').addEventListener('click', () => {
   const name = $('player-name').value.trim().slice(0, 6) || '무명';
@@ -2182,7 +2266,8 @@ $('save-rank-btn').addEventListener('click', () => {
   const top = ranks.slice(0, 10);
   saveJSON(rankKey(G.mode), top);
   $('save-row').classList.add('hidden');
-  renderRankings(G.mode, top.indexOf(rec));
+  $('rank-preview').classList.add('hidden');
+  renderRankings(G.mode, top.includes(rec) ? rec.t : 0);
   showOverlay('ranking-ui');
   S.correct();
 });

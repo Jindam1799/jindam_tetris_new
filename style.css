@@ -2027,3 +2027,57 @@ body.portrait .mc-map {
 body.portrait .lobby-links {
   margin-top: 18px;
 }
+
+/* 명예의 전당: 친구들과 함께 보는 순위 */
+.rank-summary,
+.rank-preview {
+  margin: 0 0 10px;
+  font-family: var(--font-ui);
+  font-size: 17px;
+  color: var(--blue);
+}
+.rank-preview {
+  margin: 16px 0 0;
+  color: #e07a00;
+}
+#rank-list {
+  height: 360px;
+}
+#rank-list .nm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 5px;
+  min-width: 0;
+}
+#rank-list .nm b {
+  font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#rank-list .nm small {
+  flex-basis: 100%;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--muted);
+}
+.me-tag {
+  padding: 0 6px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--sun);
+  font-style: normal;
+  font-size: 12px;
+  line-height: 16px;
+}
+#rank-list li.mine {
+  background: #fff9dc;
+}
+#rank-list li.me {
+  background: #ffe98a;
+  border-radius: 12px;
+}
+body.portrait #rank-list {
+  height: 420px;
+}
