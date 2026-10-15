@@ -1237,7 +1237,7 @@ body.touch .listen-btn kbd {
 
 /* --- 가로 패드: 양옆에 조작 버튼 --- */
 body.touch.landscape #stage {
-  width: 1270px;
+  width: 1380px;
 }
 body.touch.landscape #touch-controls {
   position: absolute;
@@ -1808,4 +1808,59 @@ body.portrait .mode-cards.two .mc-cn {
 }
 .rank-head span:nth-child(4) {
   text-align: right;
+}
+
+/* =========================================================
+   터치 조작: ▲(회전) ◀ ▼ ▶ 십자키 + 드롭
+   ========================================================= */
+.tc-left {
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-areas: '. u .' 'l d r';
+}
+.tc-right {
+  grid-template-columns: 1fr;
+  grid-template-areas: 'drop';
+}
+.tc-btn.tc-drop {
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 34px;
+  line-height: 1;
+}
+.tc-drop span {
+  font-size: 17px;
+}
+body.portrait #touch-controls {
+  align-items: stretch;
+  gap: 16px;
+  padding: 10px 18px 0;
+}
+body.portrait .tc-left {
+  flex: none;
+  width: 300px;
+  grid-template-rows: 70px 70px;
+}
+body.portrait .tc-left .tc-btn {
+  height: 70px;
+}
+body.portrait .tc-right {
+  flex: 1;
+}
+body.touch.landscape .tc-left {
+  width: 210px;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-areas: '. u .' 'l d r';
+}
+body.touch.landscape .tc-left .tc-btn {
+  height: 68px;
+}
+body.touch.landscape .tc-right {
+  width: 150px;
+}
+body.touch.landscape .tc-right .tc-drop {
+  height: 146px;
 }

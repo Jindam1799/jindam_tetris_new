@@ -1274,7 +1274,6 @@ function answerQuiz(i) {
 const cv = $('tetris');
 const ctx = cv.getContext('2d');
 const fx = $('fx').getContext('2d');
-const holdCtx = $('hold-canvas').getContext('2d');
 const nextCtx = $('next-canvas').getContext('2d');
 const boardWrap = $('board-wrap');
 
@@ -1480,10 +1479,6 @@ function drawPieceIn(c, type, cx, cy, size, alpha = 1) {
   );
 }
 function drawPreviews() {
-  const hk = holdCtx.canvas._k || 1;
-  holdCtx.setTransform(hk, 0, 0, hk, 0, 0);
-  holdCtx.clearRect(0, 0, 160, 110);
-  if (G.hold) drawPieceIn(holdCtx, G.hold.type, 80, 55, 30, G.holdUsed ? 0.35 : 1);
   const nk = nextCtx.canvas._k || 1;
   nextCtx.setTransform(nk, 0, 0, nk, 0, 0);
   nextCtx.clearRect(0, 0, 160, 330);
@@ -1725,11 +1720,6 @@ document.addEventListener('keydown', (e) => {
       break;
     case 'Space':
       if (!e.repeat) hardDrop();
-      break;
-    case 'KeyC':
-    case 'ShiftLeft':
-    case 'ShiftRight':
-      if (!e.repeat) holdPiece();
       break;
   }
 });
@@ -2208,7 +2198,7 @@ function buzz(pattern) {
 }
 
 /* 레이아웃: desktop(키보드) / portrait(세로 터치) / landscape(가로 터치) */
-const LAYOUT_SIZE = { desktop: [960, 930], landscape: [1290, 930], portrait: [548, 918] };
+const LAYOUT_SIZE = { desktop: [960, 930], landscape: [1400, 930], portrait: [548, 918] };
 let isTouch =
   (window.matchMedia && matchMedia('(pointer: coarse)').matches) ||
   (navigator.maxTouchPoints > 0 && window.matchMedia && matchMedia('(hover: none)').matches);
@@ -2254,7 +2244,6 @@ function fit() {
 
   sizeCanvas(cv, 400, 800);
   sizeCanvas($('fx'), 400, 800);
-  sizeCanvas($('hold-canvas'), 160, 110);
   sizeCanvas($('next-canvas'), 160, 330);
   drawPreviews();
   $('intro-hint').textContent = isTouch ? '화면을 터치해서 시작하세요' : '아무 키나 누르거나 클릭하세요';
@@ -2295,7 +2284,6 @@ const TOUCH_ACTS = {
   },
   cw: { down: () => canPlay() && rotate(1) },
   ccw: { down: () => canPlay() && rotate(-1) },
-  hold: { down: () => canPlay() && holdPiece() },
   drop: { down: () => canPlay() && hardDrop() },
 };
 document.querySelectorAll('.tc-btn').forEach((btn) => {
@@ -2324,7 +2312,7 @@ document.querySelectorAll('.tc-btn').forEach((btn) => {
   btn.addEventListener('contextmenu', (e) => e.preventDefault());
 });
 
-/* 보드 위 제스처: 탭=회전 · 좌우로 끌기=이동 · 아래로 끌기=소프트드롭 · 아래로 휙=하드드롭 · 위로 휙=홀드 */
+/* 보드 위 제스처: 탭=회전 · 좌우로 끌기=이동 · 아래로 끌기=소프트드롭 · 아래로 휙=하드드롭 */
 let gest = null;
 boardWrap.addEventListener('pointerdown', (e) => {
   if (e.pointerType === 'mouse' || !canPlay()) return;
@@ -2373,7 +2361,6 @@ function endGesture(e) {
   const dy = g.ly - g.y0;
   const vy = dy / Math.max(dt, 1);
   if (dy > g.cell * 2.5 && vy > 0.45 && dy > Math.abs(dx) * 1.5) hardDrop();
-  else if (dy < -g.cell * 1.5 && dt < 400 && -dy > Math.abs(dx) * 1.5) holdPiece();
   else if (!g.moved && Math.hypot(dx, dy) < 14 && dt < 320) rotate(1);
 }
 boardWrap.addEventListener('pointerup', endGesture);
